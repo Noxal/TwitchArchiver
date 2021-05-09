@@ -1,0 +1,59 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+}
+
+plugins {
+    id "java"
+    id "idea"
+    id "com.github.johnrengelman.shadow" version "5.1.0"
+}
+
+def buildNumber = System.env.BUILD_NUMBER ?: "SNAPSHOT"
+
+def projectId = "twitcharchiver"
+project.group = "sr.will"
+project.version = "1.0-" + buildNumber
+project.description = "A program to download twitch VODs and optionally upload them to youtube"
+
+def jarName = "${projectId}-${project.version.toString()}.jar"
+
+repositories {
+    mavenCentral()
+    jcenter()
+
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
+}
+
+dependencies {
+    compile "org.slf4j:slf4j-simple:1.7.30"
+    compile "com.google.code.gson:gson:2.8.6"
+    compile "org.json:json:20210307"
+    compile "com.sparkjava:spark-core:2.9.3"
+    compile "org.mariadb.jdbc:mariadb-java-client:2.4.0"
+
+    compile "com.github.twitch4j:twitch4j:1.3.1"
+    compile "commons-io:commons-io:2.7"
+}
+
+jar {
+    archiveName jarName
+}
+
+shadowJar {
+    manifest {
+        attributes "Main-Class": "sr.will.archiver.Main"
+    }
+
+    archiveName jarName
+}
+
+build {
+    dependsOn clean
+    dependsOn jar
+    dependsOn shadowJar
+
+    jar.mustRunAfter clean
+    shadowJar.mustRunAfter jar
+}
