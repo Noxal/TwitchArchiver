@@ -24,6 +24,9 @@ public class FileUtil {
         if (!Files.exists(configFile.toPath())) {
             Config config = new Config();
             saveConfig(config);
+
+            // If the config does not exist, do not attempt to start the program
+            Archiver.instance.stop();
             return config;
         }
 

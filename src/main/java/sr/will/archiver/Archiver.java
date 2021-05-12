@@ -12,18 +12,25 @@ import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sr.will.archiver.config.Config;
+import sr.will.archiver.entity.Vod;
 import sr.will.archiver.ffmpeg.TranscodeManager;
 import sr.will.archiver.sql.Database;
 import sr.will.archiver.sql.Migrations;
 import sr.will.archiver.twitch.ChannelDownloader;
 import sr.will.archiver.twitch.EventHandler;
 import sr.will.archiver.util.FileUtil;
+import sr.will.archiver.youtube.YouTubeManager;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class Archiver {
@@ -41,8 +48,10 @@ public class Archiver {
 
     public static Config config;
 
+    public final Map<String, String> users = new HashMap<>();
     public final List<ChannelDownloader> channelDownloaders = new ArrayList<>();
     public final TranscodeManager transcodeManager;
+    public final YouTubeManager youTubeManager;
 
     public Archiver() {
         instance = this;
@@ -59,8 +68,11 @@ public class Archiver {
         uploadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.upload.threads);
         scheduledExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(10);
 
+        scheduledExecutor.scheduleAtFixedRate(this::threadReport, 0, 10, TimeUnit.SECONDS);
+
         initializeTwitchClient();
         transcodeManager = new TranscodeManager();
+        youTubeManager = new YouTubeManager();
 
         LOGGER.info("Done after {}ms!", System.currentTimeMillis() - startTime);
     }
@@ -79,6 +91,10 @@ public class Archiver {
         database.reconnect();
     }
 
+    public void threadReport() {
+        Archiver.LOGGER.info("Number of active threads: {}", Thread.activeCount());
+    }
+
     public void initializeTwitchClient() {
         twitchClient = TwitchClientBuilder.builder()
                                .withClientId(config.twitch.clientId)
@@ -95,12 +111,16 @@ public class Archiver {
         LOGGER.info("Got {} users and {} streams", users.getUsers().size(), streams.getStreams().size());
 
         for (User user : users.getUsers()) {
+            this.users.put(user.getId(), user.getLogin());
             twitchClient.getClientHelper().enableStreamEventListener(user.getId(), user.getLogin());
-            LOGGER.info("Subscribed to events for channel {}", user.getLogin());
 
             Stream stream = streams.getStreams().stream().filter(s -> s.getUserId().equals(user.getId())).findFirst().orElse(null);
-            new Thread(() -> new ChannelDownloader(user, stream)).start();
+
+            LOGGER.info("Queuing channel {} ({}) {}", user.getId(), user.getLogin(), stream == null ? "" : "Currently streaming");
+            channelDownloaders.add(new ChannelDownloader(user, stream));
         }
+
+        Archiver.LOGGER.info("Queued {} channel downloads", users.getUsers().size());
     }
 
     public ChannelDownloader getChannelDownloader(String channel) {
@@ -108,6 +128,34 @@ public class Archiver {
             if (downloader.user.getLogin().equals(channel)) return downloader;
         }
 
+        return null;
+    }
+
+    public static List<Vod> getVods(ResultSet resultSet) {
+        List<Vod> vods = new ArrayList<>();
+        try {
+            while (resultSet.next()) {
+                vods.add(new Vod(
+                        resultSet.getString("id"),
+                        resultSet.getString("channel_id"),
+                        resultSet.getString("title"),
+                        resultSet.getBoolean("downloaded"),
+                        resultSet.getBoolean("transcoded"),
+                        resultSet.getBoolean("uploaded"),
+                        resultSet.getInt("parts")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return vods;
+    }
+
+    public static Config.ArchiveSet getArchiveSet(String channelId) {
+        for (Config.ArchiveSet set : config.archiveSets) {
+            if (set.twitchUser.equals(Archiver.instance.users.get(channelId))) return set;
+        }
         return null;
     }
 }

@@ -1,5 +1,7 @@
 package sr.will.archiver.config;
 
+import com.google.gson.annotations.SerializedName;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -28,7 +30,7 @@ public class Config {
 
     public static class Database {
         public String host = "DB_HOST";
-        public String database = "DB";
+        public String database = "DB_NAME";
         public String username = "DB_USER";
         public String password = "DB_PASSWORD";
     }
@@ -36,6 +38,12 @@ public class Config {
     public static class ArchiveSet {
         public String twitchUser;
         public boolean upload = false;
+        public String title = "Twitch VOD: {title} Part {part}";
+        public String description = "Please pay me";
+        public String category = "20";
+        public List<String> tags = Arrays.asList("test tag", "test tag 2");
+        @SerializedName("public")
+        public boolean publicVideo = false;
 
         public ArchiveSet(String twitchUser) {
             this.twitchUser = twitchUser;
@@ -49,7 +57,7 @@ public class Config {
     }
 
     public static class Transcode {
-        public int maxVideoLength = 240;
+        public int maxVideoLength = 120;
         public int threads = 1;
         public String directory = "transcodes";
         public String ffmpegLocation = "E:\\Downloads\\ffmpeg-4.4-essentials_build\\bin\\ffmpeg";

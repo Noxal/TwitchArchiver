@@ -5,10 +5,8 @@ import com.github.twitch4j.helix.domain.User;
 import com.github.twitch4j.helix.domain.Video;
 import com.github.twitch4j.helix.domain.VideoList;
 import sr.will.archiver.Archiver;
-import sr.will.archiver.sql.model.Vod;
+import sr.will.archiver.entity.Vod;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,38 +14,21 @@ public class ChannelDownloader {
     public User user;
     public Stream stream;
     public final List<VideoDownloader> videoDownloaders = new ArrayList<>();
-    public final List<Vod> vods = new ArrayList<>();
+    public List<Vod> vods;
 
     public ChannelDownloader(User user, Stream stream) {
         this.user = user;
         this.stream = stream;
 
-        synchronized (Archiver.instance.channelDownloaders) {
-            Archiver.instance.channelDownloaders.add(this);
-        }
-
-        downloadVideos();
+        Archiver.downloadExecutor.submit(this::run);
     }
 
-    public void downloadVideos() {
-        ResultSet resultSet = Archiver.database.query("SELECT * FROM vods WHERE channel_id = ? ORDER BY id DESC LIMIT ?;", user.getId(), Archiver.config.download.numVideos);
-        try {
-            while (resultSet.next()) {
-                vods.add(new Vod(
-                        resultSet.getString("id"),
-                        resultSet.getString("channel_id"),
-                        resultSet.getBoolean("downloaded"),
-                        resultSet.getBoolean("transcoded"),
-                        resultSet.getBoolean("uploaded")
-                ));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    public void run() {
+        vods = Archiver.getVods(Archiver.database.query("SELECT * FROM vods WHERE channel_id = ? ORDER BY id DESC LIMIT ?;", user.getId(), Archiver.config.download.numVideos));
 
         VideoList videos = Archiver.twitchClient.getHelix().getVideos(null, null, user.getId(), null, null, null, null, "archive", null, null, Archiver.config.download.numVideos).execute();
 
-        Archiver.LOGGER.info("Got {} videos from channel {}", videos.getVideos().size(), user.getLogin());
+        Archiver.LOGGER.info("Got {} videos from channel {}", videos.getVideos().size(), user.getId());
         for (Video video : videos.getVideos()) {
             if (videoDownloaders.stream().anyMatch(downloader -> downloader.video.getId().equals(video.getId()))) {
                 // Video downloader already exists, don't create it again
@@ -55,7 +36,7 @@ public class ChannelDownloader {
                 continue;
             }
 
-            Vod vod = getVod(video.getId());
+            Vod vod = getVod(video.getId(), video.getTitle());
             if (stream != null && video.getStreamId().equals(stream.getId())) {
                 // vod has a current stream associated
                 videoDownloaders.add(new VideoDownloader(this, video, vod, stream));
@@ -70,7 +51,7 @@ public class ChannelDownloader {
         this.stream = stream;
         // There's no easy api call to get a video from a stream id
         // so we just use the call from the original downloader to make things simpler
-        downloadVideos();
+        run();
     }
 
     public void streamEnded() {
@@ -84,10 +65,10 @@ public class ChannelDownloader {
         }
     }
 
-    public Vod getVod(String vodId) {
+    public Vod getVod(String vodId, String title) {
         for (Vod vod : vods) {
             if (vod.id.equals(vodId)) return vod;
         }
-        return new Vod(vodId, user.getId(), false, false, false).create();
+        return new Vod(vodId, user.getId(), title, false, false, false, 0).create();
     }
 }

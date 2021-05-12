@@ -3,15 +3,52 @@
 This program is designed to download twitch vods, transcode them, and optionally upload them to youtube.
 
 ## Configuration
-
-|Item|Description|
-|---|---|
-|Twitch client id & secret|Client id & secret for your twitch oauth integration|
-|YouTube upload|Whether you want to upload the videos to youtube or not|
-|Database section|section for connecting to a MariaDB database|
-|Archive Set|twitch usernames that you'd like to monitor|
-|Download threads|How many threads to use when downloading. Default is 5, if you are not reaching desired download speeds, you can try increasing this|
-|Download num videos|How many recent videos we should try downloading from twitch. This number can be 1-100. Values above 100 will have no effect|
-|Go Live Delay|How long to wait before checking for a VOD after we detect a livestream. Default is 5 minutes.|
-|Go Offline Delay|How long we should wait after a livestream stops before marking a VOD as completed. Default is 6 minutes. Values too low may cut downloads short.<br>Note that depending on when the VOD was last checked, it can take up to the goOfflineDelay + liveCheckInterval for a VOD to be marked as complete (default 12 minutes)|
-|Live Interval Check|How often we should check the VOD if there is a current livestream. Default is 6 minutes. Values lower than 6 minutes will not have much if any effect, as twitch only updates VODs every approximately 5 minutes|
+The default configuration will be generated automatically on initial startup. The following can be used as a reference for configuration options that are not readily obvious.
+```json
+{
+  "twitch": {
+    "clientId": "TWITCH_CLIENT_ID",
+    "clientSecret": "TWITCH_CLIENT_SECRET"
+  },
+  "google": {
+    "clientId": "GOOGLE_CLIENT_ID",
+    "clientSecret": "GOOGLE_CLIENT_SECRET"
+  },
+  "database": {
+    "host": "DB_HOST", // MariaDB
+    "database": "DB_NAME",
+    "username": "DB_USER",
+    "password": "DB_PASSWORD"
+  },
+  "archiveSets": [
+    {
+      "twitchUser": "Willsr71", // Username of a twitch user
+      "upload": true // Whether to upload the users's vods to youtube
+    },
+    {
+      "twitchUser": "Apron__",
+      "upload": false
+    }
+  ],
+  "download": {
+    "numVideos": 2, // How many recent videos we should download. Values over 100 have no effect
+    "threads": 5, // How many threads to download with. If you are not saturating your connection enough just increase this
+    "directory": "downloads" // Where to download the video files to
+  },
+  "transcode": {
+    "maxVideoLength": 120, // Max video length in minutes, videos will be split into segments of the max length if they exceed it
+    "threads": 4, // How many simultaneous transcodes to run. Recommended to only use 1 thread on a HDD, SSDs can typically handle 4+
+    "directory": "transcodes", // Where to put the transcoded files
+    "ffmpegLocation": "/path/to/ffmpeg", // Path to the ffmpeg executable
+    "ffprobeLocation": "/path/to/ffprobe" // Path to the ffprobe executable (comes with ffmpeg)
+  },
+  "upload": {
+    "threads": 1 // How many videos to upload at once
+  },
+  "times": {
+    "goLiveDelay": 5, // How many minutes to wait after someone goes live to check for a vod
+    "goOfflineDelay": 6, // How many minutes to wait after someone stops streaming to stop checking the vod
+    "liveCheckInterval": 6 // How often in minutes we chould check the vod for updates. Twitch updates vods about every 5-6 minutes so lower numbers will not have much, if any, effect
+  }
+}
+```

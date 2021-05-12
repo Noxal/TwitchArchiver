@@ -6,7 +6,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.commons.io.FileUtils;
 import sr.will.archiver.Archiver;
-import sr.will.archiver.sql.model.Vod;
+import sr.will.archiver.entity.Vod;
 import sr.will.archiver.twitch.model.PlaybackAccessToken;
 import sr.will.archiver.twitch.model.PlaybackAccessTokenRequestTemplate;
 
@@ -30,7 +30,7 @@ public class VideoDownloader {
     public Video video;
     public Vod vod;
     public Stream stream;
-    public List<PartDownloader> parts = new ArrayList<>();
+    public final List<PartDownloader> parts = new ArrayList<>();
 
     public VideoDownloader(ChannelDownloader channelDownloader, Video video, Vod vod, Stream stream) {
         this.channelDownloader = channelDownloader;
@@ -38,21 +38,15 @@ public class VideoDownloader {
         this.vod = vod;
         this.stream = stream;
 
-        Archiver.LOGGER.info("Beginning download for video {} ({}) on channel {} ({})", video.getId(), video.getTitle(), video.getUserLogin(), video.getUserId());
-
-        if (stream != null) {
-            Archiver.LOGGER.info("Video {} ({}) is live!", video.getId(), video.getTitle());
-            Archiver.LOGGER.info("Created at: {}", video.getCreatedAtInstant().toString());
-            Archiver.LOGGER.info("Duration: {}", video.getDuration());
-        }
-
         // Don't download if it's already downloaded
         if (vod.downloaded) return;
 
-        new Thread(this::download).start();
+        new Thread(this::run).start();
     }
 
-    public void download() {
+    public void run() {
+        Archiver.LOGGER.info("Starting download for vod {} on channel {} {}", vod.id, vod.channelId, stream == null ? "" : "Currently streaming");
+
         PlaybackAccessToken vodToken = getVodToken();
         String baseURL = getM3u8(vodToken);
         downloadParts(baseURL);
@@ -60,27 +54,28 @@ public class VideoDownloader {
 
     public void downloadParts(String baseURL) {
         try {
-            String basePath = "downloads/" + video.getUserId() + "/" + video.getId();
-            List<String> files = Files.lines(new File(basePath, "index.m3u8").toPath())
+            List<String> files = Files.lines(new File(vod.getDownloadDir(), "index.m3u8").toPath())
                                          .filter(line -> !line.isEmpty() && !line.startsWith("#"))
                                          .collect(Collectors.toList());
 
-            Archiver.LOGGER.info("getting {} files...", files.size());
-
             // If this is a current livestream and this isn't the first time checking
             if (stream != null && parts.size() != 0) {
-                Archiver.LOGGER.info("Downloading an additional {} files", files.size() - parts.size());
+                Archiver.LOGGER.info("Queuing {} files for vod {} on channel {}", files.size() - parts.size(), vod.id, vod.channelId);
                 if (files.size() == parts.size()) {
                     checkCompleted();
                     return;
                 }
+            } else {
+                Archiver.LOGGER.info("Queuing {} files for vod {} on channel {}", files.size(), vod.id, vod.channelId);
             }
 
             for (int x = parts.size(); x < files.size(); x++) {
                 parts.add(new PartDownloader(this, baseURL, files.get(x)));
             }
+
+            checkCompleted();
         } catch (IOException e) {
-            Archiver.LOGGER.error("Failed to download parts");
+            Archiver.LOGGER.error("Failed to download parts for vod {} on channel {}", vod.id, vod.channelId);
             e.printStackTrace();
         }
     }
@@ -96,12 +91,12 @@ public class VideoDownloader {
             while (qualityPlaylistScanner.hasNext()) {
                 String line = qualityPlaylistScanner.nextLine();
                 if (line.startsWith("#")) continue;
-                File file = new File("downloads/" + video.getUserId() + "/" + video.getId() + "/index.m3u8");
+                File file = new File(vod.getDownloadDir(), "index.m3u8");
                 FileUtils.copyURLToFile(new URL(line), file);
                 return line.substring(0, line.lastIndexOf('/') + 1);
             }
         } catch (IOException e) {
-            Archiver.LOGGER.error("Failed to get M3u8 playlist");
+            Archiver.LOGGER.error("Failed to get M3u8 playlist for vod {} on channel {}", vod.id, vod.channelId);
             e.printStackTrace();
         }
         return null;
@@ -126,7 +121,7 @@ public class VideoDownloader {
                                       .get("videoPlaybackAccessToken").getAsJsonObject();
             return new PlaybackAccessToken(data.get("value").getAsString(), data.get("signature").getAsString());
         } catch (IOException e) {
-            Archiver.LOGGER.error("Unable to get Vod token for vod {} ({})", video.getId(), video.getTitle());
+            Archiver.LOGGER.error("Unable to get Vod token for vod {} on channel {}", vod.id, vod.channelId);
             e.printStackTrace();
         }
         return null;
@@ -137,10 +132,10 @@ public class VideoDownloader {
         //Archiver.LOGGER.info("Video {} is {}% complete ({}/{})", video.getId(), (int) Math.round(((double) partsCompleted / (double) parts.size()) * 100), partsCompleted, parts.size());
         if (partsCompleted < parts.size()) return;
 
-        Archiver.LOGGER.info("Video {} ({}) completed downloading", video.getId(), video.getTitle());
+        Archiver.LOGGER.info("Completed downloading vod {} on channel {}", vod.id, vod.channelId);
         if (stream != null) {
-            Archiver.LOGGER.info("Video {} on channel {} is currently live, will recheck in {} minutes", video.getId(), video.getUserLogin(), Archiver.config.times.liveCheckInterval);
-            Archiver.scheduledExecutor.schedule(this::download, Archiver.config.times.liveCheckInterval, TimeUnit.MINUTES);
+            Archiver.LOGGER.info("Vod {} on channel {} is currently live, will recheck in {} minutes", vod.id, vod.channelId, Archiver.config.times.liveCheckInterval);
+            Archiver.scheduledExecutor.schedule(this::run, Archiver.config.times.liveCheckInterval, TimeUnit.MINUTES);
             return;
         }
 
@@ -156,6 +151,8 @@ public class VideoDownloader {
     }
 
     public int getPartsCompleted() {
-        return Math.toIntExact(parts.stream().filter(part -> part.done).count());
+        synchronized (parts) {
+            return Math.toIntExact(parts.stream().filter(part -> part.done).count());
+        }
     }
 }

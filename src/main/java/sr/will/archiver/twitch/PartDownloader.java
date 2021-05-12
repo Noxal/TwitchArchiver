@@ -19,6 +19,12 @@ public class PartDownloader {
         this.baseURL = baseURL;
         this.name = name;
 
+        File file = new File(videoDownloader.vod.getDownloadDir(), name);
+        if (file.exists()) {
+            done = true;
+            return;
+        }
+
         Archiver.downloadExecutor.submit(this::run);
     }
 

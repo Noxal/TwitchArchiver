@@ -4,11 +4,9 @@ import net.bramp.ffmpeg.FFmpeg;
 import net.bramp.ffmpeg.FFmpegExecutor;
 import net.bramp.ffmpeg.FFprobe;
 import sr.will.archiver.Archiver;
-import sr.will.archiver.sql.model.Vod;
+import sr.will.archiver.entity.Vod;
 
 import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,26 +27,10 @@ public class TranscodeManager {
             return;
         }
 
-        ResultSet resultSet = Archiver.database.query("SELECT * FROM vods WHERE downloaded = true AND transcoded = false;");
-        List<Vod> vods = new ArrayList<>();
-        try {
-            while (resultSet.next()) {
-                vods.add(new Vod(
-                        resultSet.getString("id"),
-                        resultSet.getString("channel_id"),
-                        resultSet.getBoolean("downloaded"),
-                        resultSet.getBoolean("transcoded"),
-                        resultSet.getBoolean("uploaded")
-                ));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
+        List<Vod> vods = Archiver.getVods(Archiver.database.query("SELECT * FROM vods WHERE downloaded = true AND transcoded = false;"));
         Archiver.LOGGER.info("Got {} videos to transcode", vods.size());
 
         vods.forEach(this::transcode);
-
         Archiver.LOGGER.info("Queued {} videos for transcode", transcoders.size());
     }
 
