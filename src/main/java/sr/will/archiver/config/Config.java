@@ -12,6 +12,8 @@ public class Config {
             new ArchiveSet("Apron__")
     );
     public Download download = new Download();
+    public Transcode transcode = new Transcode();
+    public Upload upload = new Upload();
     public Times times = new Times();
 
     public static class Twitch {
@@ -41,8 +43,21 @@ public class Config {
     }
 
     public static class Download {
-        public int threads = 5;
         public int numVideos = 2;
+        public int threads = 5;
+        public String directory = "downloads";
+    }
+
+    public static class Transcode {
+        public int maxVideoLength = 240;
+        public int threads = 1;
+        public String directory = "transcodes";
+        public String ffmpegLocation = "E:\\Downloads\\ffmpeg-4.4-essentials_build\\bin\\ffmpeg";
+        public String ffprobeLocation = "E:\\Downloads\\ffmpeg-4.4-essentials_build\\bin\\ffprobe";
+    }
+
+    public static class Upload {
+        public int threads = 1;
     }
 
     public static class Times {

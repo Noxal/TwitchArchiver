@@ -16,7 +16,7 @@ public class ChannelDownloader {
     public User user;
     public Stream stream;
     public final List<VideoDownloader> videoDownloaders = new ArrayList<>();
-    public List<Vod> vods = new ArrayList<>();
+    public final List<Vod> vods = new ArrayList<>();
 
     public ChannelDownloader(User user, Stream stream) {
         this.user = user;
@@ -51,16 +51,17 @@ public class ChannelDownloader {
         for (Video video : videos.getVideos()) {
             if (videoDownloaders.stream().anyMatch(downloader -> downloader.video.getId().equals(video.getId()))) {
                 // Video downloader already exists, don't create it again
+                Archiver.LOGGER.info("Downloader already exists, skipping");
                 continue;
             }
 
             Vod vod = getVod(video.getId());
             if (stream != null && video.getStreamId().equals(stream.getId())) {
                 // vod has a current stream associated
-                new Thread(() -> new VideoDownloader(this, video, vod, stream)).start();
+                videoDownloaders.add(new VideoDownloader(this, video, vod, stream));
             } else {
                 // no current stream
-                new Thread(() -> new VideoDownloader(this, video, vod, null)).start();
+                videoDownloaders.add(new VideoDownloader(this, video, vod, null));
             }
         }
     }

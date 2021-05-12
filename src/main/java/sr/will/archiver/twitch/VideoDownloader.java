@@ -38,10 +38,6 @@ public class VideoDownloader {
         this.vod = vod;
         this.stream = stream;
 
-        synchronized (channelDownloader.videoDownloaders) {
-            channelDownloader.videoDownloaders.add(this);
-        }
-
         Archiver.LOGGER.info("Beginning download for video {} ({}) on channel {} ({})", video.getId(), video.getTitle(), video.getUserLogin(), video.getUserId());
 
         if (stream != null) {
@@ -53,7 +49,7 @@ public class VideoDownloader {
         // Don't download if it's already downloaded
         if (vod.downloaded) return;
 
-        download();
+        new Thread(this::download).start();
     }
 
     public void download() {
@@ -81,7 +77,7 @@ public class VideoDownloader {
             }
 
             for (int x = parts.size(); x < files.size(); x++) {
-                parts.add(new PartDownloader(this, baseURL, basePath, files.get(x)));
+                parts.add(new PartDownloader(this, baseURL, files.get(x)));
             }
         } catch (IOException e) {
             Archiver.LOGGER.error("Failed to download parts");
@@ -138,7 +134,7 @@ public class VideoDownloader {
 
     public void checkCompleted() {
         int partsCompleted = getPartsCompleted();
-        Archiver.LOGGER.info("Video {} is {}% complete ({}/{})", video.getId(), (int) Math.round(((double) partsCompleted / (double) parts.size()) * 100), partsCompleted, parts.size());
+        //Archiver.LOGGER.info("Video {} is {}% complete ({}/{})", video.getId(), (int) Math.round(((double) partsCompleted / (double) parts.size()) * 100), partsCompleted, parts.size());
         if (partsCompleted < parts.size()) return;
 
         Archiver.LOGGER.info("Video {} ({}) completed downloading", video.getId(), video.getTitle());
@@ -149,8 +145,14 @@ public class VideoDownloader {
         }
 
         // No current livestream, we can mark the download as completed
-        Archiver.LOGGER.info("Marking stream as complete, beginning transcode");
+        Archiver.LOGGER.info("Marking stream as complete, queuing transcode");
         vod.setDownloaded();
+
+        synchronized (channelDownloader.videoDownloaders) {
+            channelDownloader.videoDownloaders.remove(this);
+        }
+
+        Archiver.instance.transcodeManager.transcode(vod);
     }
 
     public int getPartsCompleted() {

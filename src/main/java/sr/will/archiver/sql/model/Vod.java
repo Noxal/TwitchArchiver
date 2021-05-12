@@ -15,8 +15,14 @@ public class Vod {
         this.downloaded = downloaded;
         this.transcoded = transcoded;
         this.uploaded = uploaded;
+    }
 
-        Archiver.LOGGER.info("new vod: {}", id);
+    public String getDownloadDir() {
+        return Archiver.config.download.directory + "/" + channelId + "/" + id + "/";
+    }
+
+    public String getTranscodeDir() {
+        return Archiver.config.transcode.directory + "/" + channelId + "/";
     }
 
     public Vod create() {

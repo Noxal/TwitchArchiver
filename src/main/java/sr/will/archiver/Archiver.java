@@ -12,6 +12,7 @@ import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sr.will.archiver.config.Config;
+import sr.will.archiver.ffmpeg.TranscodeManager;
 import sr.will.archiver.sql.Database;
 import sr.will.archiver.sql.Migrations;
 import sr.will.archiver.twitch.ChannelDownloader;
@@ -31,7 +32,9 @@ public class Archiver {
     public static final Logger LOGGER = LoggerFactory.getLogger("Archiver");
     public static final Gson GSON = new GsonBuilder().create();
 
-    public static ThreadPoolExecutor executor;
+    public static ThreadPoolExecutor downloadExecutor;
+    public static ThreadPoolExecutor transcodeExecutor;
+    public static ThreadPoolExecutor uploadExecutor;
     public static ScheduledThreadPoolExecutor scheduledExecutor;
     public static Database database;
     public static TwitchClient twitchClient;
@@ -39,6 +42,7 @@ public class Archiver {
     public static Config config;
 
     public final List<ChannelDownloader> channelDownloaders = new ArrayList<>();
+    public final TranscodeManager transcodeManager;
 
     public Archiver() {
         instance = this;
@@ -50,10 +54,13 @@ public class Archiver {
 
         Migrations.deploy();
 
-        executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.download.threads);
-        scheduledExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(5);
+        downloadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.download.threads);
+        transcodeExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.transcode.threads);
+        uploadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.upload.threads);
+        scheduledExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(10);
 
         initializeTwitchClient();
+        transcodeManager = new TranscodeManager();
 
         LOGGER.info("Done after {}ms!", System.currentTimeMillis() - startTime);
     }
