@@ -1,5 +1,6 @@
 package sr.will.archiver.youtube;
 
+import com.google.api.client.googleapis.media.MediaHttpUploader;
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.Video;
@@ -12,7 +13,8 @@ import sr.will.archiver.entity.Vod;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 
 public class PartUploader {
@@ -20,6 +22,7 @@ public class PartUploader {
     public final Vod vod;
     public int part;
     public boolean done = false;
+    private long size;
 
     public PartUploader(VideoUploader uploader, Vod vod, int part) {
         this.uploader = uploader;
@@ -33,7 +36,7 @@ public class PartUploader {
         Archiver.LOGGER.info("Starting upload for vod {} part {} on channel {}", vod.id, part, vod.channelId);
 
         try {
-            Config.ArchiveSet archiveSet = Archiver.getArchiveSet(vod.id);
+            Config.ArchiveSet archiveSet = Archiver.getArchiveSet(vod.channelId);
             if (archiveSet == null) {
                 Archiver.LOGGER.error("Archive configuration for channel {} is missing, cancelling upload", vod.channelId);
                 return;
@@ -42,27 +45,31 @@ public class PartUploader {
             Video video = new Video();
 
             VideoSnippet snippet = new VideoSnippet();
-            snippet.setTitle(archiveSet.title.replace("{title}", vod.title).replace("{part}", (part + 1) + ""));
-            snippet.setDescription(archiveSet.description);
+            snippet.setTitle(getReplacedString(archiveSet.title));
+            snippet.setDescription(getReplacedString(archiveSet.description));
             snippet.setCategoryId(archiveSet.category);
             snippet.setTags(archiveSet.tags);
             video.setSnippet(snippet);
 
             VideoStatus status = new VideoStatus();
             status.setPrivacyStatus(archiveSet.publicVideo ? "public" : "unlisted");
-            status.setEmbeddable(true);
+            status.setEmbeddable(archiveSet.embeddable);
+            status.setMadeForKids(archiveSet.madeForKids);
             video.setStatus(status);
 
             File mediaFile = new File(vod.getTranscodeDir(), vod.id + "-" + part + ".mp4");
             InputStreamContent mediaContent = new InputStreamContent("application/octet-stream",
                     new BufferedInputStream(new FileInputStream(mediaFile)));
             mediaContent.setLength(mediaContent.getLength());
+            size = mediaContent.getLength();
 
-            YouTube.Videos.Insert request = uploader.manager.youTube.videos()
-                                                    .insert(Arrays.asList("snippet", "status"), video, mediaContent);
-            Video response = request.setUploadType("direct").execute();
-            Archiver.LOGGER.info("response: {}", response);
-        } catch (IOException e) {
+            YouTube.Videos.Insert insert = uploader.manager.youTube.videos()
+                                                   .insert(Arrays.asList("snippet", "status"), video, mediaContent);
+            MediaHttpUploader uploader = insert.getMediaHttpUploader();
+            uploader.setDirectUploadEnabled(true);
+
+            Video response = insert.execute();
+        } catch (Exception e) {
             Archiver.LOGGER.error("Failed to upload vod {} part {} on channel {}", vod.id, part, vod.channelId);
             e.printStackTrace();
             return;
@@ -70,6 +77,19 @@ public class PartUploader {
 
         Archiver.LOGGER.info("Completed upload for vod {} part {} on channel {}", vod.id, part, vod.channelId);
         markComplete();
+    }
+
+    public String getReplacedString(String original) {
+        return original
+                       .replace("{title}", vod.title)
+                       .replace("{user}", Archiver.instance.usernames.get(vod.channelId))
+                       .replace("{description}", vod.description)
+                       .replace("{part}", part + "")
+                       .replace("{parts}", vod.parts + "");
+    }
+
+    public String getTimeString(String key) {
+        return DateTimeFormatter.ofPattern(Archiver.config.upload.timeFormats.get(key)).withZone(ZoneId.systemDefault()).format(vod.createdAt);
     }
 
     public void markComplete() {

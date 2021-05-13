@@ -41,7 +41,7 @@ public class VideoDownloader {
         // Don't download if it's already downloaded
         if (vod.downloaded) return;
 
-        new Thread(this::run).start();
+        Archiver.downloadExecutor.submit(this::run);
     }
 
     public void run() {
@@ -54,7 +54,7 @@ public class VideoDownloader {
 
     public void downloadParts(String baseURL) {
         try {
-            List<String> files = Files.lines(new File(vod.getDownloadDir(), "index.m3u8").toPath())
+            List<String> files = Files.lines(new File(vod.getDownloadDir(), "index-original.m3u8").toPath())
                                          .filter(line -> !line.isEmpty() && !line.startsWith("#"))
                                          .collect(Collectors.toList());
 
@@ -91,7 +91,7 @@ public class VideoDownloader {
             while (qualityPlaylistScanner.hasNext()) {
                 String line = qualityPlaylistScanner.nextLine();
                 if (line.startsWith("#")) continue;
-                File file = new File(vod.getDownloadDir(), "index.m3u8");
+                File file = new File(vod.getDownloadDir(), "index-original.m3u8");
                 FileUtils.copyURLToFile(new URL(line), file);
                 return line.substring(0, line.lastIndexOf('/') + 1);
             }

@@ -7,6 +7,7 @@ import com.github.twitch4j.helix.domain.VideoList;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.entity.Vod;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,7 +37,7 @@ public class ChannelDownloader {
                 continue;
             }
 
-            Vod vod = getVod(video.getId(), video.getTitle());
+            Vod vod = getVod(video.getId(), video.getCreatedAtInstant(), video.getTitle(), video.getDescription());
             if (stream != null && video.getStreamId().equals(stream.getId())) {
                 // vod has a current stream associated
                 videoDownloaders.add(new VideoDownloader(this, video, vod, stream));
@@ -65,10 +66,10 @@ public class ChannelDownloader {
         }
     }
 
-    public Vod getVod(String vodId, String title) {
+    public Vod getVod(String vodId, Instant createdAt, String title, String description) {
         for (Vod vod : vods) {
             if (vod.id.equals(vodId)) return vod;
         }
-        return new Vod(vodId, user.getId(), title, false, false, false, 0).create();
+        return new Vod(vodId, user.getId(), createdAt, title, description, false, false, false, 0).create();
     }
 }

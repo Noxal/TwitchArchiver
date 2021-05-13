@@ -46,7 +46,9 @@ public class Migrations {
         Archiver.database.execute("CREATE TABLE IF NOT EXISTS vods(" +
                                           "id int NOT NULL," +
                                           "channel_id int NOT NULL," +
+                                          "created_at bigint(20) NOT NULL," +
                                           "title varchar(120) NOT NULL," +
+                                          "description text NOT NULL," +
                                           "downloaded boolean NOT NULL DEFAULT 0," +
                                           "transcoded boolean NOT NULL DEFAULT 0," +
                                           "uploaded boolean NOT NULL DEFAULT 0," +

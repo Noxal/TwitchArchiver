@@ -22,7 +22,14 @@ public class PartTranscoder {
 
     public void run() {
         Archiver.LOGGER.info("Starting transcode for vod {} part {} on channel {}", vod.id, part, vod.channelId);
-        job.run();
+
+        try {
+            job.run();
+        } catch (Exception e) {
+            Archiver.LOGGER.error("Error transcoding vod {} part {} on channel {}", vod.id, part, vod.channelId);
+            e.printStackTrace();
+            return;
+        }
 
         Archiver.LOGGER.info("Completed transcode for vod {} part {} on channel {}", vod.id, part, vod.channelId);
         markComplete();

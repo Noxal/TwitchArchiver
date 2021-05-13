@@ -3,7 +3,9 @@ package sr.will.archiver.config;
 import com.google.gson.annotations.SerializedName;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Config {
     public Twitch twitch = new Twitch();
@@ -38,10 +40,12 @@ public class Config {
     public static class ArchiveSet {
         public String twitchUser;
         public boolean upload = false;
-        public String title = "Twitch VOD: {title} Part {part}";
-        public String description = "Please pay me";
+        public String title = "{date}: {title} Part {part}/{parts}";
+        public String description = "Twitch vod streamed by {user} on {date}, hh:mm.\nVOD description: {description}";
         public String category = "20";
-        public List<String> tags = Arrays.asList("test tag", "test tag 2");
+        public List<String> tags = Arrays.asList("Gaming", "Twitch");
+        public boolean madeForKids = false;
+        public boolean embeddable = true;
         @SerializedName("public")
         public boolean publicVideo = false;
 
@@ -66,6 +70,9 @@ public class Config {
 
     public static class Upload {
         public int threads = 1;
+        public Map<String, String> timeFormats = new HashMap<String, String>() {{
+            put("date", "yyyy-MM-dd");
+        }};
     }
 
     public static class Times {

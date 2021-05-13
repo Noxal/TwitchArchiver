@@ -6,8 +6,8 @@ import net.bramp.ffmpeg.probe.FFmpegProbeResult;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.entity.Vod;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -28,9 +28,36 @@ public class VideoTranscoder {
     public void run() {
         Archiver.LOGGER.info("Starting transcode for vod {} on channel {}", vod.id, vod.channelId);
 
+        BufferedReader playlistReader = null;
+        BufferedWriter playlistWriter = null;
         try {
+            // Process playlist file, replaces any muted segments in the latest playlist with any unmuted segments we may have from the stream
+            File originalPlaylist = new File(vod.getDownloadDir(), "index-original.m3u8");
+            File playlist = new File(vod.getDownloadDir(), "index.m3u8");
+            playlistReader = new BufferedReader(new FileReader(originalPlaylist));
+            playlistWriter = new BufferedWriter(new FileWriter(playlist));
+
+            // TODO replace the files.exists calls with a single directory file list
+            String line;
+            while ((line = playlistReader.readLine()) != null) {
+                if (!line.startsWith("#") && line.contains("-muted")) {
+                    String newLine = line.replace("-muted", "");
+                    if (Files.exists(new File(vod.getDownloadDir(), newLine).toPath())) {
+                        Archiver.LOGGER.info("Found unmuted file {}, replacing {}", newLine, line);
+                        line = newLine;
+                    }
+                }
+
+                playlistWriter.write(line);
+                playlistWriter.newLine();
+            }
+
+            playlistReader.close();
+            playlistWriter.close();
+
+            // Attempt to transcode into segments with ffmpeg
             new File(vod.getTranscodeDir()).mkdirs();
-            probe = TranscodeManager.ffprobe.probe(vod.getDownloadDir() + "index.m3u8");
+            probe = TranscodeManager.ffprobe.probe(playlist.getPath());
 
             FFmpegFormat format = probe.getFormat();
             Archiver.LOGGER.info("vod length: {}s ({} minutes), parts: {}", format.duration, (int) Math.ceil(format.duration / 60), (int) Math.ceil(format.duration / (Archiver.config.transcode.maxVideoLength * 60)));
@@ -57,6 +84,13 @@ public class VideoTranscoder {
         } catch (IOException e) {
             Archiver.LOGGER.error("Failed to transcode vod {} on channel {}", vod.id, vod.channelId);
             e.printStackTrace();
+        } finally {
+            try {
+                if (playlistReader != null) playlistReader.close();
+                if (playlistWriter != null) playlistWriter.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

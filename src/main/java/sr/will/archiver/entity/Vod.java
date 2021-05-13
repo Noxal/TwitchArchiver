@@ -2,19 +2,25 @@ package sr.will.archiver.entity;
 
 import sr.will.archiver.Archiver;
 
+import java.time.Instant;
+
 public class Vod {
     public final String id;
     public final String channelId;
-    public String title;
+    public final Instant createdAt;
+    public final String title;
+    public final String description;
     public boolean downloaded;
     public boolean transcoded;
     public boolean uploaded;
     public int parts;
 
-    public Vod(String id, String channelId, String title, boolean downloaded, boolean transcoded, boolean uploaded, int parts) {
+    public Vod(String id, String channelId, Instant createdAt, String title, String description, boolean downloaded, boolean transcoded, boolean uploaded, int parts) {
         this.id = id;
         this.channelId = channelId;
+        this.createdAt = createdAt;
         this.title = title;
+        this.description = description;
         this.downloaded = downloaded;
         this.transcoded = transcoded;
         this.uploaded = uploaded;
@@ -30,7 +36,7 @@ public class Vod {
     }
 
     public Vod create() {
-        Archiver.database.execute("INSERT INTO vods (id, channel_id, title) VALUES (?, ?, ?);", id, channelId, title);
+        Archiver.database.execute("INSERT INTO vods (id, channel_id, created_at, title, description) VALUES (?, ?, ?, ?, ?);", id, channelId, createdAt.getEpochSecond(), title, description);
         return this;
     }
 

@@ -7,6 +7,7 @@ import com.github.twitch4j.helix.domain.Stream;
 import com.github.twitch4j.helix.domain.StreamList;
 import com.github.twitch4j.helix.domain.User;
 import com.github.twitch4j.helix.domain.UserList;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
@@ -23,6 +24,7 @@ import sr.will.archiver.youtube.YouTubeManager;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,7 +32,6 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class Archiver {
@@ -48,7 +49,7 @@ public class Archiver {
 
     public static Config config;
 
-    public final Map<String, String> users = new HashMap<>();
+    public final Map<String, String> usernames = new HashMap<>();
     public final List<ChannelDownloader> channelDownloaders = new ArrayList<>();
     public final TranscodeManager transcodeManager;
     public final YouTubeManager youTubeManager;
@@ -63,12 +64,10 @@ public class Archiver {
 
         Migrations.deploy();
 
-        downloadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.download.threads);
-        transcodeExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.transcode.threads);
-        uploadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.upload.threads);
-        scheduledExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(10);
-
-        scheduledExecutor.scheduleAtFixedRate(this::threadReport, 0, 10, TimeUnit.SECONDS);
+        downloadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.download.threads, new ThreadFactoryBuilder().setNameFormat("download-%d").build());
+        transcodeExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.transcode.threads, new ThreadFactoryBuilder().setNameFormat("transcode-%d").build());
+        uploadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.upload.threads, new ThreadFactoryBuilder().setNameFormat("upload-%d").build());
+        scheduledExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(10, new ThreadFactoryBuilder().setNameFormat("scheduled-%d").build());
 
         initializeTwitchClient();
         transcodeManager = new TranscodeManager();
@@ -91,10 +90,6 @@ public class Archiver {
         database.reconnect();
     }
 
-    public void threadReport() {
-        Archiver.LOGGER.info("Number of active threads: {}", Thread.activeCount());
-    }
-
     public void initializeTwitchClient() {
         twitchClient = TwitchClientBuilder.builder()
                                .withClientId(config.twitch.clientId)
@@ -111,7 +106,7 @@ public class Archiver {
         LOGGER.info("Got {} users and {} streams", users.getUsers().size(), streams.getStreams().size());
 
         for (User user : users.getUsers()) {
-            this.users.put(user.getId(), user.getLogin());
+            usernames.put(user.getId(), user.getLogin());
             twitchClient.getClientHelper().enableStreamEventListener(user.getId(), user.getLogin());
 
             Stream stream = streams.getStreams().stream().filter(s -> s.getUserId().equals(user.getId())).findFirst().orElse(null);
@@ -138,7 +133,9 @@ public class Archiver {
                 vods.add(new Vod(
                         resultSet.getString("id"),
                         resultSet.getString("channel_id"),
+                        Instant.ofEpochMilli(resultSet.getLong("created_at")),
                         resultSet.getString("title"),
+                        resultSet.getString("description"),
                         resultSet.getBoolean("downloaded"),
                         resultSet.getBoolean("transcoded"),
                         resultSet.getBoolean("uploaded"),
@@ -153,8 +150,11 @@ public class Archiver {
     }
 
     public static Config.ArchiveSet getArchiveSet(String channelId) {
+        String username = instance.usernames.get(channelId);
         for (Config.ArchiveSet set : config.archiveSets) {
-            if (set.twitchUser.equals(Archiver.instance.users.get(channelId))) return set;
+            if (set.twitchUser.equals(username)) {
+                return set;
+            }
         }
         return null;
     }

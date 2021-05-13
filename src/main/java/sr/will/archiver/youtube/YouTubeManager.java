@@ -8,11 +8,13 @@ import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.youtube.YouTube;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.config.Config;
 import sr.will.archiver.entity.Vod;
 
+import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
@@ -45,7 +47,10 @@ public class YouTubeManager {
                     Archiver.config.google.clientId,
                     Archiver.config.google.clientSecret,
                     scopes
-            ).build();
+            )
+                                                       .setDataStoreFactory(new FileDataStoreFactory(new File("")))
+                                                       .setAccessType("offline")
+                                                       .build();
             Credential credential = new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver.Builder().setPort(80).build()).authorize("user");
 
             youTube = new YouTube.Builder(httpTransport, jsonFactory, credential)
@@ -65,12 +70,12 @@ public class YouTubeManager {
     }
 
     public void upload(Vod vod) {
-        for (Config.ArchiveSet archiveSet : Archiver.config.archiveSets) {
-            if (!archiveSet.twitchUser.equals(vod.channelId)) continue;
-            if (!archiveSet.upload) return;
-            break;
+        Config.ArchiveSet archiveSet = Archiver.getArchiveSet(vod.channelId);
+        if (archiveSet == null) {
+            Archiver.LOGGER.error("Failed to locate config for channel {}", vod.channelId);
+            return;
         }
 
-        uploaders.add(new VideoUploader(this, vod));
+        if (archiveSet.upload) uploaders.add(new VideoUploader(this, vod));
     }
 }
