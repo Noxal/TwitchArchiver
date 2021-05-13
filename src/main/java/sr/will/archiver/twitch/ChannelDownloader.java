@@ -5,6 +5,7 @@ import com.github.twitch4j.helix.domain.User;
 import com.github.twitch4j.helix.domain.Video;
 import com.github.twitch4j.helix.domain.VideoList;
 import sr.will.archiver.Archiver;
+import sr.will.archiver.config.Config;
 import sr.will.archiver.entity.Vod;
 
 import java.time.Instant;
@@ -14,6 +15,7 @@ import java.util.List;
 public class ChannelDownloader {
     public User user;
     public Stream stream;
+    public Config.ArchiveSet archiveSet;
     public final List<VideoDownloader> videoDownloaders = new ArrayList<>();
     public List<Vod> vods;
 
@@ -21,13 +23,19 @@ public class ChannelDownloader {
         this.user = user;
         this.stream = stream;
 
+        archiveSet = Archiver.getArchiveSet(user.getId());
+        if (archiveSet == null) {
+            Archiver.LOGGER.error("No archive set found for user {}, cancelling downloads", user.getLogin());
+            return;
+        }
+
         Archiver.downloadExecutor.submit(this::run);
     }
 
     public void run() {
-        vods = Archiver.getVods(Archiver.database.query("SELECT * FROM vods WHERE channel_id = ? ORDER BY id DESC LIMIT ?;", user.getId(), Archiver.config.download.numVideos));
+        vods = Archiver.getVods(Archiver.database.query("SELECT * FROM vods WHERE channel_id = ? ORDER BY id DESC LIMIT ?;", user.getId(), archiveSet.numVideos));
 
-        VideoList videos = Archiver.twitchClient.getHelix().getVideos(null, null, user.getId(), null, null, null, null, "archive", null, null, Archiver.config.download.numVideos).execute();
+        VideoList videos = Archiver.twitchClient.getHelix().getVideos(null, null, user.getId(), null, null, null, null, "archive", null, null, archiveSet.numVideos).execute();
 
         Archiver.LOGGER.info("Got {} videos from channel {}", videos.getVideos().size(), user.getId());
         for (Video video : videos.getVideos()) {

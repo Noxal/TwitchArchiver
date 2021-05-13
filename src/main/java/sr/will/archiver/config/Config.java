@@ -39,6 +39,7 @@ public class Config {
 
     public static class ArchiveSet {
         public String twitchUser;
+        public int numVideos = 2;
         public boolean upload = false;
         public String title = "{date}: {title} Part {part}/{parts}";
         public String description = "Twitch vod streamed by {user} on {date}, hh:mm.\nVOD description: {description}";
@@ -55,7 +56,6 @@ public class Config {
     }
 
     public static class Download {
-        public int numVideos = 2;
         public int threads = 5;
         public String directory = "downloads";
     }
