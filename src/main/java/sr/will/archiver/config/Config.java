@@ -3,9 +3,7 @@ package sr.will.archiver.config;
 import com.google.gson.annotations.SerializedName;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class Config {
     public Twitch twitch = new Twitch();
@@ -42,7 +40,7 @@ public class Config {
         public int numVideos = 2;
         public boolean upload = false;
         public String title = "{date}: {title} Part {part}/{parts}";
-        public String description = "Twitch vod streamed by {user} on {date}, hh:mm.\nVOD description: {description}";
+        public String description = "Twitch vod streamed by {user} on {date}, {time}.\nVOD description: {description}";
         public String category = "20";
         public List<String> tags = Arrays.asList("Gaming", "Twitch");
         public boolean madeForKids = false;
@@ -70,9 +68,8 @@ public class Config {
 
     public static class Upload {
         public int threads = 1;
-        public Map<String, String> timeFormats = new HashMap<String, String>() {{
-            put("date", "yyyy-MM-dd");
-        }};
+        public String dateFormat = "yyyy-MM-dd";
+        public String timeFormat = "hh:mm";
     }
 
     public static class Times {

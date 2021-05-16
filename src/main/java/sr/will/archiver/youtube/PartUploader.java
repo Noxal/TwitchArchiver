@@ -64,7 +64,7 @@ public class PartUploader {
             size = mediaContent.getLength();
 
             YouTube.Videos.Insert insert = uploader.manager.youTube.videos()
-                                                   .insert(Arrays.asList("snippet", "status"), video, mediaContent);
+                    .insert(Arrays.asList("snippet", "status"), video, mediaContent);
             MediaHttpUploader uploader = insert.getMediaHttpUploader();
             uploader.setDirectUploadEnabled(true);
 
@@ -81,15 +81,17 @@ public class PartUploader {
 
     public String getReplacedString(String original) {
         return original
-                       .replace("{title}", vod.title)
-                       .replace("{user}", Archiver.instance.usernames.get(vod.channelId))
-                       .replace("{description}", vod.description)
-                       .replace("{part}", part + "")
-                       .replace("{parts}", vod.parts + "");
+                .replace("{title}", vod.title)
+                .replace("{user}", Archiver.instance.usernames.get(vod.channelId))
+                .replace("{description}", vod.description)
+                .replace("{part}", part + "")
+                .replace("{parts}", vod.parts + "")
+                .replace("{date}", getTimeString(Archiver.config.upload.dateFormat))
+                .replace("{time}", getTimeString(Archiver.config.upload.timeFormat));
     }
 
-    public String getTimeString(String key) {
-        return DateTimeFormatter.ofPattern(Archiver.config.upload.timeFormats.get(key)).withZone(ZoneId.systemDefault()).format(vod.createdAt);
+    public String getTimeString(String format) {
+        return DateTimeFormatter.ofPattern(format).withZone(ZoneId.systemDefault()).format(vod.createdAt);
     }
 
     public void markComplete() {

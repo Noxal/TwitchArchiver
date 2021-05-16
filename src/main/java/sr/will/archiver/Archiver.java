@@ -12,6 +12,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.impl.SimpleLogger;
 import sr.will.archiver.config.Config;
 import sr.will.archiver.entity.Vod;
 import sr.will.archiver.ffmpeg.TranscodeManager;
