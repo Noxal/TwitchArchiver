@@ -2,6 +2,7 @@ package sr.will.archiver.youtube;
 
 import sr.will.archiver.Archiver;
 import sr.will.archiver.entity.Vod;
+import sr.will.archiver.notification.NotificationEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +21,7 @@ public class VideoUploader {
 
     public void run() {
         Archiver.LOGGER.info("Starting upload for vod {} on channel {}", vod.id, vod.channelId);
+        Archiver.instance.webhookManager.execute(NotificationEvent.UPLOAD_START, vod);
 
         for (int i = 0; i < vod.parts; i++) {
             parts.add(new PartUploader(this, vod, i));
@@ -32,6 +34,7 @@ public class VideoUploader {
         if (getPartsCompleted() < parts.size()) return;
 
         Archiver.LOGGER.info("Completed upload for vod {} on channel {}", vod.id, vod.channelId);
+        Archiver.instance.webhookManager.execute(NotificationEvent.UPLOAD_FINISH, vod);
         vod.setUploaded();
 
         synchronized (manager.uploaders) {

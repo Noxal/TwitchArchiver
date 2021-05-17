@@ -9,6 +9,7 @@ import com.google.api.services.youtube.model.VideoStatus;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.config.Config;
 import sr.will.archiver.entity.Vod;
+import sr.will.archiver.notification.NotificationEvent;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -71,6 +72,7 @@ public class PartUploader {
             Video response = insert.execute();
         } catch (Exception e) {
             Archiver.LOGGER.error("Failed to upload vod {} part {} on channel {}", vod.id, part, vod.channelId);
+            Archiver.instance.webhookManager.execute(NotificationEvent.UPLOAD_FAIL, vod);
             e.printStackTrace();
             return;
         }

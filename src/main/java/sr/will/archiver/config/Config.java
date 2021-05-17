@@ -1,7 +1,10 @@
 package sr.will.archiver.config;
 
 import com.google.gson.annotations.SerializedName;
+import sr.will.archiver.notification.NotificationEvent;
 
+import java.io.File;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 
@@ -15,6 +18,9 @@ public class Config {
     public Download download = new Download();
     public Transcode transcode = new Transcode();
     public Upload upload = new Upload();
+    public List<WebHook> notifications = Arrays.asList(
+            new WebHook("DISCORD_WEBHOOK_URL", WebHook.Type.DISCORD)
+    );
     public Times times = new Times();
 
     public static class Twitch {
@@ -51,11 +57,19 @@ public class Config {
         public ArchiveSet(String twitchUser) {
             this.twitchUser = twitchUser;
         }
+
+        public void validate() {
+            if (google == null) google = new Google();
+        }
     }
 
     public static class Download {
         public int threads = 5;
         public String directory = "downloads";
+
+        public void validate() {
+            if (threads <= 0) throw new RuntimeException("Cannot have less than 1 download thread");
+        }
     }
 
     public static class Transcode {
@@ -64,12 +78,53 @@ public class Config {
         public String directory = "transcodes";
         public String ffmpegLocation = "E:\\Downloads\\ffmpeg-4.4-essentials_build\\bin\\ffmpeg";
         public String ffprobeLocation = "E:\\Downloads\\ffmpeg-4.4-essentials_build\\bin\\ffprobe";
+
+        public void validate() {
+            if (threads <= 0) throw new RuntimeException("Cannot have less than 1 transcode thread");
+            if (new File(ffmpegLocation).exists()) throw new RuntimeException("ffmpeg not found");
+            if (new File(ffprobeLocation).exists()) throw new RuntimeException("ffprobe not found");
+        }
     }
 
     public static class Upload {
         public int threads = 1;
         public String dateFormat = "yyyy-MM-dd";
         public String timeFormat = "hh:mm";
+
+        public void validate() {
+            if (threads <= 0) throw new RuntimeException("Cannot have less than 1 upload thread");
+            if (!validatePattern(dateFormat)) throw new RuntimeException("Invalid upload date pattern");
+            if (!validatePattern(timeFormat)) throw new RuntimeException("Invalid upload time pattern");
+        }
+
+        private boolean validatePattern(String pattern) {
+            try {
+                DateTimeFormatter.ofPattern(pattern);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
+            return true;
+        }
+    }
+
+    public static class WebHook {
+        public String webhook;
+        public Type type;
+        public List<NotificationEvent> events = Arrays.asList(NotificationEvent.values());
+
+        public WebHook(String webhook, Type type) {
+            this.webhook = webhook;
+            this.type = type;
+        }
+
+        public void validate() {
+            if (events == null) events = Arrays.asList(NotificationEvent.values());
+        }
+
+        public enum Type {
+            DISCORD
+        }
     }
 
     public static class Times {
@@ -78,9 +133,15 @@ public class Config {
         public int liveCheckInterval = 6;
     }
 
-    public static void validateConfig(Config config) throws RuntimeException {
-        for (ArchiveSet archiveSet : config.archiveSets) {
-            if (archiveSet.google == null) archiveSet.google = new ArchiveSet.Google();
+    public void validate() {
+        for (ArchiveSet archiveSet : archiveSets) {
+            archiveSet.validate();
+        }
+        download.validate();
+        transcode.validate();
+        upload.validate();
+        for (WebHook webHook : notifications) {
+            webHook.validate();
         }
     }
 }

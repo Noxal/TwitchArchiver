@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import sr.will.archiver.config.Config;
 import sr.will.archiver.entity.Vod;
 import sr.will.archiver.ffmpeg.TranscodeManager;
+import sr.will.archiver.notification.WebhookManager;
 import sr.will.archiver.sql.Database;
 import sr.will.archiver.sql.Migrations;
 import sr.will.archiver.twitch.ChannelDownloader;
@@ -53,6 +54,7 @@ public class Archiver {
     public final List<ChannelDownloader> channelDownloaders = new ArrayList<>();
     public final TranscodeManager transcodeManager;
     public final YouTubeManager youTubeManager;
+    public final WebhookManager webhookManager;
 
     public Archiver() {
         instance = this;
@@ -69,6 +71,7 @@ public class Archiver {
         uploadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.upload.threads, new ThreadFactoryBuilder().setNameFormat("upload-%d").build());
         scheduledExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(10, new ThreadFactoryBuilder().setNameFormat("scheduled-%d").build());
 
+        webhookManager = new WebhookManager();
         initializeTwitchClient();
         transcodeManager = new TranscodeManager();
         youTubeManager = new YouTubeManager();
@@ -84,12 +87,12 @@ public class Archiver {
 
     public void reload() {
         config = FileUtil.getConfig();
-        FileUtil.saveConfig(config);
         try {
-            Config.validateConfig(config);
+            config.validate();
             FileUtil.saveConfig(config);
         } catch (RuntimeException e) {
             Archiver.LOGGER.error("Configuration error: {}", e.getMessage());
+            FileUtil.saveConfig(config);
             stop();
         }
 

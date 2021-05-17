@@ -7,6 +7,7 @@ import com.google.gson.JsonParser;
 import org.apache.commons.io.FileUtils;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.entity.Vod;
+import sr.will.archiver.notification.NotificationEvent;
 import sr.will.archiver.twitch.model.PlaybackAccessToken;
 import sr.will.archiver.twitch.model.PlaybackAccessTokenRequestTemplate;
 
@@ -46,6 +47,7 @@ public class VideoDownloader {
 
     public void run() {
         Archiver.LOGGER.info("Starting download for vod {} on channel {} {}", vod.id, vod.channelId, stream == null ? "" : "Currently streaming");
+        Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_START, vod, stream);
 
         PlaybackAccessToken vodToken = getVodToken();
         String baseURL = getM3u8(vodToken);
@@ -76,6 +78,7 @@ public class VideoDownloader {
             checkCompleted();
         } catch (IOException e) {
             Archiver.LOGGER.error("Failed to download parts for vod {} on channel {}", vod.id, vod.channelId);
+            Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FAIL, vod);
             e.printStackTrace();
         }
     }
@@ -97,6 +100,7 @@ public class VideoDownloader {
             }
         } catch (IOException e) {
             Archiver.LOGGER.error("Failed to get M3u8 playlist for vod {} on channel {}", vod.id, vod.channelId);
+            Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FAIL, vod);
             e.printStackTrace();
         }
         return null;
@@ -122,6 +126,7 @@ public class VideoDownloader {
             return new PlaybackAccessToken(data.get("value").getAsString(), data.get("signature").getAsString());
         } catch (IOException e) {
             Archiver.LOGGER.error("Unable to get Vod token for vod {} on channel {}", vod.id, vod.channelId);
+            Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FAIL, vod);
             e.printStackTrace();
         }
         return null;
@@ -133,6 +138,7 @@ public class VideoDownloader {
         if (partsCompleted < parts.size()) return;
 
         Archiver.LOGGER.info("Completed downloading vod {} on channel {}", vod.id, vod.channelId);
+        Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FINISH, vod);
         if (stream != null) {
             Archiver.LOGGER.info("Vod {} on channel {} is currently live, will recheck in {} minutes", vod.id, vod.channelId, Archiver.config.times.liveCheckInterval);
             Archiver.scheduledExecutor.schedule(this::run, Archiver.config.times.liveCheckInterval, TimeUnit.MINUTES);

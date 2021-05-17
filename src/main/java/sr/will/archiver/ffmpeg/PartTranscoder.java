@@ -3,6 +3,7 @@ package sr.will.archiver.ffmpeg;
 import net.bramp.ffmpeg.job.FFmpegJob;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.entity.Vod;
+import sr.will.archiver.notification.NotificationEvent;
 
 public class PartTranscoder {
     private final VideoTranscoder videoTranscoder;
@@ -27,6 +28,7 @@ public class PartTranscoder {
             job.run();
         } catch (Exception e) {
             Archiver.LOGGER.error("Error transcoding vod {} part {} on channel {}", vod.id, part, vod.channelId);
+            Archiver.instance.webhookManager.execute(NotificationEvent.TRANSCODE_FAIL, vod);
             e.printStackTrace();
             return;
         }

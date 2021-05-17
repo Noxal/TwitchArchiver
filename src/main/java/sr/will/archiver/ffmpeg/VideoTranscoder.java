@@ -5,12 +5,14 @@ import net.bramp.ffmpeg.probe.FFmpegFormat;
 import net.bramp.ffmpeg.probe.FFmpegProbeResult;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.entity.Vod;
+import sr.will.archiver.notification.NotificationEvent;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class VideoTranscoder {
     private final TranscodeManager manager;
@@ -27,6 +29,7 @@ public class VideoTranscoder {
 
     public void run() {
         Archiver.LOGGER.info("Starting transcode for vod {} on channel {}", vod.id, vod.channelId);
+        Archiver.instance.webhookManager.execute(NotificationEvent.TRANSCODE_START, vod);
 
         BufferedReader playlistReader = null;
         BufferedWriter playlistWriter = null;
@@ -37,12 +40,12 @@ public class VideoTranscoder {
             playlistReader = new BufferedReader(new FileReader(originalPlaylist));
             playlistWriter = new BufferedWriter(new FileWriter(playlist));
 
-            // TODO replace the files.exists calls with a single directory file list
+            List<String> existingFiles = Arrays.stream(new File(vod.getDownloadDir()).listFiles()).map(File::getName).collect(Collectors.toList());
             String line;
             while ((line = playlistReader.readLine()) != null) {
                 if (!line.startsWith("#") && line.contains("-muted")) {
                     String newLine = line.replace("-muted", "");
-                    if (Files.exists(new File(vod.getDownloadDir(), newLine).toPath())) {
+                    if (existingFiles.contains(newLine)) {
                         Archiver.LOGGER.info("Found unmuted file {}, replacing {}", newLine, line);
                         line = newLine;
                     }
@@ -83,6 +86,7 @@ public class VideoTranscoder {
             Archiver.LOGGER.info("Queued {} transcode parts for vod {} on channel {}", parts.size(), vod.id, vod.channelId);
         } catch (IOException e) {
             Archiver.LOGGER.error("Failed to transcode vod {} on channel {}", vod.id, vod.channelId);
+            Archiver.instance.webhookManager.execute(NotificationEvent.TRANSCODE_FAIL, vod);
             e.printStackTrace();
         } finally {
             try {
@@ -98,6 +102,7 @@ public class VideoTranscoder {
         if (getPartsCompleted() < parts.size()) return;
 
         Archiver.LOGGER.info("Completed transcode for vod {} on channel {}, queuing for upload", vod.id, vod.channelId);
+        Archiver.instance.webhookManager.execute(NotificationEvent.TRANSCODE_FINISH, vod);
         vod.setTranscoded(parts.size());
 
         synchronized (manager.transcoders) {

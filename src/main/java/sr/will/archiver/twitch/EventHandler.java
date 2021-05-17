@@ -12,6 +12,7 @@ public class EventHandler {
     @EventSubscriber
     public void onChannelGoLive(ChannelGoLiveEvent event) {
         Archiver.LOGGER.info("{} just started streaming, will check for vod in {} minutes", event.getChannel().getName(), Archiver.config.times.goLiveDelay);
+        //Archiver.instance.webhookManager.execute(NotificationEvent.STREAM_START);
         Archiver.scheduledExecutor.schedule(
                 () -> Archiver.instance.getChannelDownloader(event.getChannel().getName()).addVideoFromStream(event.getStream()),
                 Archiver.config.times.goLiveDelay,
@@ -22,6 +23,7 @@ public class EventHandler {
     @EventSubscriber
     public void onChannelGoOffline(ChannelGoOfflineEvent event) {
         Archiver.LOGGER.info("{} just stopped streaming, will stop vod checking in {} minutes", event.getChannel().getName(), Archiver.config.times.goOfflineDelay);
+        //Archiver.instance.webhookManager.execute(NotificationEvent.STREAM_END);
         Archiver.scheduledExecutor.schedule(
                 () -> Archiver.instance.getChannelDownloader(event.getChannel().getName()).streamEnded(),
                 Archiver.config.times.goOfflineDelay,
