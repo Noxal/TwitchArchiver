@@ -7,11 +7,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class VideoUploader {
-    public final YouTubeManager manager;
+    public final YouTubeClient manager;
     public final Vod vod;
     public final List<PartUploader> parts = new ArrayList<>();
 
-    public VideoUploader(YouTubeManager manager, Vod vod) {
+    public VideoUploader(YouTubeClient manager, Vod vod) {
         this.manager = manager;
         this.vod = vod;
 

@@ -55,8 +55,8 @@ public class VideoDownloader {
     public void downloadParts(String baseURL) {
         try {
             List<String> files = Files.lines(new File(vod.getDownloadDir(), "index-original.m3u8").toPath())
-                                         .filter(line -> !line.isEmpty() && !line.startsWith("#"))
-                                         .collect(Collectors.toList());
+                    .filter(line -> !line.isEmpty() && !line.startsWith("#"))
+                    .collect(Collectors.toList());
 
             // If this is a current livestream and this isn't the first time checking
             if (stream != null && parts.size() != 0) {
@@ -83,9 +83,9 @@ public class VideoDownloader {
     public String getM3u8(PlaybackAccessToken token) {
         try {
             URL url = new URL("https://usher.ttvnw.net/vod/" + video.getId() + ".m3u8?" +
-                                      "allow_source=true&player=twitchweb&playlist_include_framerate=true&allow_spectre=true" +
-                                      "&token=" + URLEncoder.encode(token.token, "UTF-8") +
-                                      "&sig=" + token.signature
+                    "allow_source=true&player=twitchweb&playlist_include_framerate=true&allow_spectre=true" +
+                    "&token=" + URLEncoder.encode(token.token, "UTF-8") +
+                    "&sig=" + token.signature
             );
             Scanner qualityPlaylistScanner = new Scanner(url.openStream());
             while (qualityPlaylistScanner.hasNext()) {
@@ -112,13 +112,13 @@ public class VideoDownloader {
             connection.setRequestProperty("Content-Type", "text/plain;charset=UTF-8");
             connection.setDoOutput(true);
             OutputStream outputStream = connection.getOutputStream();
-            outputStream.write(Archiver.GSON.toJson(new PlaybackAccessTokenRequestTemplate(video.getId())).getBytes(StandardCharsets.UTF_8));
+            outputStream.write(Archiver.GSON.toJson(new PlaybackAccessTokenRequestTemplate(vod.id)).getBytes(StandardCharsets.UTF_8));
             outputStream.close();
             connection.connect();
 
             JsonObject data = JsonParser.parseReader(new InputStreamReader(connection.getInputStream())).getAsJsonObject()
-                                      .get("data").getAsJsonObject()
-                                      .get("videoPlaybackAccessToken").getAsJsonObject();
+                    .get("data").getAsJsonObject()
+                    .get("videoPlaybackAccessToken").getAsJsonObject();
             return new PlaybackAccessToken(data.get("value").getAsString(), data.get("signature").getAsString());
         } catch (IOException e) {
             Archiver.LOGGER.error("Unable to get Vod token for vod {} on channel {}", vod.id, vod.channelId);

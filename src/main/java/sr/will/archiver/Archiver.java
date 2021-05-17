@@ -12,7 +12,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.impl.SimpleLogger;
 import sr.will.archiver.config.Config;
 import sr.will.archiver.entity.Vod;
 import sr.will.archiver.ffmpeg.TranscodeManager;
@@ -86,6 +85,13 @@ public class Archiver {
     public void reload() {
         config = FileUtil.getConfig();
         FileUtil.saveConfig(config);
+        try {
+            Config.validateConfig(config);
+            FileUtil.saveConfig(config);
+        } catch (RuntimeException e) {
+            Archiver.LOGGER.error("Configuration error: {}", e.getMessage());
+            stop();
+        }
 
         database.setCredentials(config.database.host, config.database.database, config.database.username, config.database.password);
         database.reconnect();
@@ -93,10 +99,10 @@ public class Archiver {
 
     public void initializeTwitchClient() {
         twitchClient = TwitchClientBuilder.builder()
-                               .withClientId(config.twitch.clientId)
-                               .withClientSecret(config.twitch.clientSecret)
-                               .withEnableHelix(true)
-                               .build();
+                .withClientId(config.twitch.clientId)
+                .withClientSecret(config.twitch.clientSecret)
+                .withEnableHelix(true)
+                .build();
         twitchClient.getEventManager().getEventHandler(SimpleEventHandler.class).registerListener(new EventHandler());
 
         LOGGER.info("Getting user info...");

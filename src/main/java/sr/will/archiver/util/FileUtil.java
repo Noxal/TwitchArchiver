@@ -34,7 +34,7 @@ public class FileUtil {
     }
 
     public static void saveConfig(Config config) {
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        Gson gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
         writeText(gson.toJson(config), ".", "config.json", "config");
     }
 

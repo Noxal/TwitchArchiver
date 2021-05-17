@@ -7,7 +7,6 @@ import java.util.List;
 
 public class Config {
     public Twitch twitch = new Twitch();
-    public Google google = new Google();
     public Database database = new Database();
     public List<ArchiveSet> archiveSets = Arrays.asList(
             new ArchiveSet("Willsr71"),
@@ -23,11 +22,6 @@ public class Config {
         public String clientSecret = "TWITCH_CLIENT_SECRET";
     }
 
-    public static class Google {
-        public String clientId = "GOOGLE_CLIENT_ID";
-        public String clientSecret = "GOOGLE_CLIENT_SECRET";
-    }
-
     public static class Database {
         public String host = "DB_HOST";
         public String database = "DB_NAME";
@@ -39,6 +33,7 @@ public class Config {
         public String twitchUser;
         public int numVideos = 2;
         public boolean upload = false;
+        public Google google = new Google();
         public String title = "{date}: {title} Part {part}/{parts}";
         public String description = "Twitch vod streamed by {user} on {date}, {time}.\nVOD description: {description}";
         public String category = "20";
@@ -47,6 +42,11 @@ public class Config {
         public boolean embeddable = true;
         @SerializedName("public")
         public boolean publicVideo = false;
+
+        public static class Google {
+            public String clientId = "GOOGLE_CLIENT_ID";
+            public String clientSecret = "GOOGLE_CLIENT_SECRET";
+        }
 
         public ArchiveSet(String twitchUser) {
             this.twitchUser = twitchUser;
@@ -76,5 +76,11 @@ public class Config {
         public int goLiveDelay = 5;
         public int goOfflineDelay = 6;
         public int liveCheckInterval = 6;
+    }
+
+    public static void validateConfig(Config config) throws RuntimeException {
+        for (ArchiveSet archiveSet : config.archiveSets) {
+            if (archiveSet.google == null) archiveSet.google = new ArchiveSet.Google();
+        }
     }
 }

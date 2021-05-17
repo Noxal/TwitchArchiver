@@ -44,14 +44,24 @@ public class ChannelDownloader {
             }
 
             Vod vod = getVod(video.getId(), video.getCreatedAtInstant(), video.getTitle(), video.getDescription());
+            vods.remove(vod);
             if (stream != null && video.getStreamId().equals(stream.getId())) {
                 // vod has a current stream associated
-                videoDownloaders.add(new VideoDownloader(this, video, vod, stream));
+                downloadVod(video, vod, stream);
             } else {
                 // no current stream
-                videoDownloaders.add(new VideoDownloader(this, video, vod, null));
+                downloadVod(video, vod, null);
             }
         }
+
+        // Handle vods that have been deleted from twitch but are still in the db
+        for (Vod vod : vods) {
+            downloadVod(null, vod, null);
+        }
+    }
+
+    public void downloadVod(Video video, Vod vod, Stream stream) {
+        videoDownloaders.add(new VideoDownloader(this, video, vod, stream));
     }
 
     public void addVideoFromStream(Stream stream) {
