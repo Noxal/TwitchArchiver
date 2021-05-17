@@ -1,15 +1,13 @@
 package sr.will.archiver.twitch;
 
-import com.github.twitch4j.helix.domain.Stream;
-import com.github.twitch4j.helix.domain.User;
-import com.github.twitch4j.helix.domain.Video;
-import com.github.twitch4j.helix.domain.VideoList;
+import com.github.twitch4j.helix.domain.*;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.config.Config;
 import sr.will.archiver.entity.Vod;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class ChannelDownloader {
@@ -68,6 +66,12 @@ public class ChannelDownloader {
         // The downloader may not check for an additional time of up to the liveCheckInterval (default 2 minutes)
         //
         // Fastest time is just the goOfflineDelay, slowest time is goOfflineDelay + liveCheckInterval
+
+        // Occasionally the twitch checker marks a stream as online, immediately offline, and immediately online again
+        // To account for this we check if there's a current livestream going with the same id
+        StreamList streams = Archiver.twitchClient.getHelix().getStreams(null, null, null, null, null, null, null, Collections.singletonList(archiveSet.twitchUser)).execute();
+        if (!streams.getStreams().isEmpty() && streams.getStreams().get(0).getId().equals(stream.getId())) return;
+
         this.stream = null;
         for (VideoDownloader downloader : videoDownloaders) {
             if (downloader.stream != null) downloader.stream = null;
