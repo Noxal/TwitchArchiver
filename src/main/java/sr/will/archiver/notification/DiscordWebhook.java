@@ -14,11 +14,12 @@ public class DiscordWebhook extends Webhook {
     }
 
     @Override
-    public void execute(NotificationEvent event, Vod vod, Stream stream) {
-        client.send(replace(event, vod, stream));
+    public void execute(NotificationEvent event, String message, Vod vod, Stream stream) {
+        if (message == null) client.send(replace(event, vod, stream));
+        else client.send(message);
     }
 
-    protected void run(NotificationEvent event, Vod vod, Stream stream) {
+    protected void run(NotificationEvent event, String message, Vod vod, Stream stream) {
         // Not used for discord
     }
 }

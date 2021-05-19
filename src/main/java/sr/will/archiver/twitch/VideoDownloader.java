@@ -47,7 +47,6 @@ public class VideoDownloader {
 
     public void run() {
         Archiver.LOGGER.info("Starting download for vod {} on channel {} {}", vod.id, vod.channelId, stream == null ? "" : "Currently streaming");
-        Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_START, vod, stream);
 
         PlaybackAccessToken vodToken = getVodToken();
         String baseURL = getM3u8(vodToken);
@@ -69,6 +68,7 @@ public class VideoDownloader {
                 }
             } else {
                 Archiver.LOGGER.info("Queuing {} files for vod {} on channel {}", files.size(), vod.id, vod.channelId);
+                Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_START, vod, stream);
             }
 
             for (int x = parts.size(); x < files.size(); x++) {
@@ -138,7 +138,6 @@ public class VideoDownloader {
         if (partsCompleted < parts.size()) return;
 
         Archiver.LOGGER.info("Completed downloading vod {} on channel {}", vod.id, vod.channelId);
-        Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FINISH, vod);
         if (stream != null) {
             Archiver.LOGGER.info("Vod {} on channel {} is currently live, will recheck in {} minutes", vod.id, vod.channelId, Archiver.config.times.liveCheckInterval);
             Archiver.scheduledExecutor.schedule(this::run, Archiver.config.times.liveCheckInterval, TimeUnit.MINUTES);
@@ -147,6 +146,7 @@ public class VideoDownloader {
 
         // No current livestream, we can mark the download as completed
         Archiver.LOGGER.info("Marking stream as complete, queuing transcode");
+        Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FINISH, vod);
         vod.setDownloaded();
 
         synchronized (channelDownloader.videoDownloaders) {

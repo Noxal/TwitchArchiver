@@ -12,11 +12,11 @@ public abstract class Webhook {
         this.config = config;
     }
 
-    public void execute(NotificationEvent event, Vod vod, Stream stream) {
-        Archiver.scheduledExecutor.submit(() -> run(event, vod, stream));
+    public void execute(NotificationEvent event, String message, Vod vod, Stream stream) {
+        Archiver.scheduledExecutor.submit(() -> run(event, message, vod, stream));
     }
 
-    protected abstract void run(NotificationEvent event, Vod vod, Stream stream);
+    protected abstract void run(NotificationEvent event, String message, Vod vod, Stream stream);
 
     protected String replace(NotificationEvent event, Vod vod, Stream stream) {
         return event.message

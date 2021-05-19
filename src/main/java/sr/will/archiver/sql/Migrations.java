@@ -41,26 +41,26 @@ public class Migrations {
 
     private static void createTables() {
         Archiver.database.execute("CREATE TABLE IF NOT EXISTS migrations(" +
-                                          "id int NOT NULL," +
-                                          "PRIMARY KEY (id));");
+                "id int NOT NULL," +
+                "PRIMARY KEY (id));");
         Archiver.database.execute("CREATE TABLE IF NOT EXISTS vods(" +
-                                          "id int NOT NULL," +
-                                          "channel_id int NOT NULL," +
-                                          "created_at bigint(20) NOT NULL," +
-                                          "title varchar(120) NOT NULL," +
-                                          "description text NOT NULL," +
-                                          "downloaded boolean NOT NULL DEFAULT 0," +
-                                          "transcoded boolean NOT NULL DEFAULT 0," +
-                                          "uploaded boolean NOT NULL DEFAULT 0," +
-                                          "parts int NOT NULL DEFAULT 0," +
-                                          "PRIMARY KEY (id));");
+                "id int NOT NULL," +
+                "channel_id int NOT NULL," +
+                "created_at bigint(20) NOT NULL," +
+                "title varchar(120) NOT NULL," +
+                "description text NOT NULL," +
+                "downloaded boolean NOT NULL DEFAULT 0," +
+                "transcoded boolean NOT NULL DEFAULT 0," +
+                "uploaded boolean NOT NULL DEFAULT 0," +
+                "parts int NOT NULL DEFAULT 0," +
+                "PRIMARY KEY (id));");
         Archiver.database.execute("CREATE TABLE IF NOT EXISTS chat(" +
-                                          "id int NOT NULL AUTO_INCREMENT," +
-                                          "vod_id int NOT NULL," +
-                                          "timestamp bigint(20) NOT NULL," +
-                                          "author varchar(25) NOT NULL," +
-                                          "message varchar(500) NOT NULL," +
-                                          "PRIMARY KEY (id)," +
-                                          "FOREIGN KEY (vod_id) REFERENCES vods(id));");
+                "id int NOT NULL AUTO_INCREMENT," +
+                "vod_id int NOT NULL," +
+                "timestamp bigint(20) NOT NULL," +
+                "author varchar(25) NOT NULL," +
+                "message varchar(500) NOT NULL," +
+                "PRIMARY KEY (id)," +
+                "FOREIGN KEY (vod_id) REFERENCES vods(id));");
     }
 }

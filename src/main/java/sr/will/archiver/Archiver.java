@@ -128,9 +128,9 @@ public class Archiver {
         Archiver.LOGGER.info("Queued {} channel downloads", users.getUsers().size());
     }
 
-    public ChannelDownloader getChannelDownloader(String channel) {
+    public ChannelDownloader getChannelDownloader(String channelId) {
         for (ChannelDownloader downloader : channelDownloaders) {
-            if (downloader.user.getLogin().equals(channel)) return downloader;
+            if (downloader.user.getId().equals(channelId)) return downloader;
         }
 
         return null;

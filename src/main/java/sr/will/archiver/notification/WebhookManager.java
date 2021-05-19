@@ -23,18 +23,22 @@ public class WebhookManager {
         }
     }
 
-    public void execute(NotificationEvent event, Vod vod, Stream stream) {
+    public void execute(NotificationEvent event, String message, Vod vod, Stream stream) {
         for (Webhook webhook : webhooks) {
             if (!webhook.config.events.contains(event)) continue;
-            webhook.execute(event, vod, stream);
+            webhook.execute(event, message, vod, stream);
         }
     }
 
-    public void execute(NotificationEvent event, Vod vod) {
-        execute(event, vod, null);
+    public void execute(NotificationEvent event, Vod vod, Stream stream) {
+        execute(event, null, vod, stream);
     }
 
-    public void execute(NotificationEvent event) {
-        execute(event, null, null);
+    public void execute(NotificationEvent event, Vod vod) {
+        execute(event, null, vod, null);
+    }
+
+    public void execute(NotificationEvent event, String message) {
+        execute(event, message, null, null);
     }
 }

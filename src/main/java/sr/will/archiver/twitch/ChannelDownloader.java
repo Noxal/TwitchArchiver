@@ -1,13 +1,15 @@
 package sr.will.archiver.twitch;
 
-import com.github.twitch4j.helix.domain.*;
+import com.github.twitch4j.helix.domain.Stream;
+import com.github.twitch4j.helix.domain.User;
+import com.github.twitch4j.helix.domain.Video;
+import com.github.twitch4j.helix.domain.VideoList;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.config.Config;
 import sr.will.archiver.entity.Vod;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class ChannelDownloader {
@@ -16,6 +18,8 @@ public class ChannelDownloader {
     public Config.ArchiveSet archiveSet;
     public final List<VideoDownloader> videoDownloaders = new ArrayList<>();
     public List<Vod> vods;
+
+    public VideoDownloader liveDownloader;
 
     public ChannelDownloader(User user, Stream stream) {
         this.user = user;
@@ -47,21 +51,18 @@ public class ChannelDownloader {
             vods.remove(vod);
             if (stream != null && video.getStreamId().equals(stream.getId())) {
                 // vod has a current stream associated
-                downloadVod(video, vod, stream);
+                liveDownloader = new VideoDownloader(this, video, vod, stream);
+                videoDownloaders.add(liveDownloader);
             } else {
                 // no current stream
-                downloadVod(video, vod, null);
+                videoDownloaders.add(new VideoDownloader(this, video, vod, null));
             }
         }
 
         // Handle vods that have been deleted from twitch but are still in the db
         for (Vod vod : vods) {
-            downloadVod(null, vod, null);
+            videoDownloaders.add(new VideoDownloader(this, null, vod, null));
         }
-    }
-
-    public void downloadVod(Video video, Vod vod, Stream stream) {
-        videoDownloaders.add(new VideoDownloader(this, video, vod, stream));
     }
 
     public void addVideoFromStream(Stream stream) {
@@ -72,20 +73,14 @@ public class ChannelDownloader {
     }
 
     public void streamEnded() {
-        // This function is fired after the goOfflineDelay (default 2 minutes)
-        // The downloader may not check for an additional time of up to the liveCheckInterval (default 2 minutes)
+        // This function is fired after the goOfflineDelay
+        // The downloader may not check for an additional time of up to the liveCheckInterval
         //
         // Fastest time is just the goOfflineDelay, slowest time is goOfflineDelay + liveCheckInterval
 
-        // Occasionally the twitch checker marks a stream as online, immediately offline, and immediately online again
-        // To account for this we check if there's a current livestream going with the same id
-        StreamList streams = Archiver.twitchClient.getHelix().getStreams(null, null, null, null, null, null, null, Collections.singletonList(archiveSet.twitchUser)).execute();
-        if (!streams.getStreams().isEmpty() && streams.getStreams().get(0).getId().equals(stream.getId())) return;
-
-        this.stream = null;
-        for (VideoDownloader downloader : videoDownloaders) {
-            if (downloader.stream != null) downloader.stream = null;
-        }
+        stream = null;
+        liveDownloader.stream = null;
+        liveDownloader = null;
     }
 
     public Vod getVod(String vodId, Instant createdAt, String title, String description) {
