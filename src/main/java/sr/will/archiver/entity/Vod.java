@@ -38,7 +38,7 @@ public class Vod {
     }
 
     public Vod create() {
-        Archiver.database.execute("INSERT IGNORED INTO vods (id, channel_id, created_at, title, description) VALUES (?, ?, ?, ?, ?);", id, channelId, createdAt.toEpochMilli(), title, description);
+        Archiver.database.execute("INSERT IGNORE INTO vods (id, channel_id, created_at, title, description) VALUES (?, ?, ?, ?, ?);", id, channelId, createdAt.toEpochMilli(), title, description);
         return this;
     }
 

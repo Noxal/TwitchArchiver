@@ -17,10 +17,10 @@ public class ChatSectionDownloader {
     public final ChatDownloader chatDownloader;
     public final Direction direction;
     public final String cursor;
-    public final float offset;
+    public final double offset;
     public boolean done = false;
 
-    public ChatSectionDownloader(ChatDownloader chatDownloader, Direction direction, String cursor, float offset) {
+    public ChatSectionDownloader(ChatDownloader chatDownloader, Direction direction, String cursor, double offset) {
         this.chatDownloader = chatDownloader;
         this.direction = direction;
         this.cursor = cursor;
@@ -66,7 +66,7 @@ public class ChatSectionDownloader {
                                 comments.comments.stream()
                                         .filter(comment -> comment._id.equals(id.toString()))
                                         .map(comment -> comment.content_offset_seconds)
-                                        .findFirst().orElse(-1f),
+                                        .findFirst().orElse(-1d),
                                 direction
                         );
                         insertMessages(comments);

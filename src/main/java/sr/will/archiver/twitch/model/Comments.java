@@ -16,7 +16,7 @@ public class Comments {
         public String channel_id; // twitch channel id
         //public String content_type; // always "video" in this context, not used
         public String content_id; // twitch vod id
-        public float content_offset_seconds;
+        public double content_offset_seconds;
         public Commenter commenter;
         //public String source; // always "chat" in this context
         //public String state; // "published"

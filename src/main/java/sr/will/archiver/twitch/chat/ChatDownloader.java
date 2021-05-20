@@ -45,7 +45,7 @@ public class ChatDownloader {
     }
 
     public float getChatStartOffset() {
-        ResultSet result = Archiver.database.query("SELECT (offset) FROM chat WHERE vod = ? SORT BY offset DESC LIMIT 1;", vodDownloader.vod.id);
+        ResultSet result = Archiver.database.query("SELECT (offset) FROM chat WHERE vod = ? ORDER BY offset DESC LIMIT 1;", vodDownloader.vod.id);
         try {
             if (!result.first()) return 0; // no chat messages in table, start from the beginning
             return result.getFloat("offset"); // send the offset of the latest message
