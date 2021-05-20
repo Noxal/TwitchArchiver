@@ -61,7 +61,7 @@ public class VodDownloader {
 
         PlaybackAccessToken vodToken = getVodToken();
         String baseURL = getM3u8(vodToken);
-        //downloadParts(baseURL);
+        downloadParts(baseURL);
         chatDownloader.run();
     }
 
