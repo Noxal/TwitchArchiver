@@ -15,8 +15,8 @@ public class DiscordWebhook extends Webhook {
 
     @Override
     public void execute(NotificationEvent event, String message, Vod vod, Stream stream) {
-        if (message == null) client.send(replace(event, vod, stream));
-        else client.send(message);
+        if (message == null) message = replace(event, vod, stream);
+        client.send(message);
     }
 
     protected void run(NotificationEvent event, String message, Vod vod, Stream stream) {

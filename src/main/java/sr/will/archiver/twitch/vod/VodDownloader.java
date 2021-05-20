@@ -1,4 +1,4 @@
-package sr.will.archiver.twitch;
+package sr.will.archiver.twitch.vod;
 
 import com.github.twitch4j.helix.domain.Stream;
 import com.github.twitch4j.helix.domain.Video;
@@ -8,6 +8,9 @@ import org.apache.commons.io.FileUtils;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.entity.Vod;
 import sr.will.archiver.notification.NotificationEvent;
+import sr.will.archiver.twitch.ChannelDownloader;
+import sr.will.archiver.twitch.DownloadPriority;
+import sr.will.archiver.twitch.chat.ChatDownloader;
 import sr.will.archiver.twitch.model.PlaybackAccessToken;
 import sr.will.archiver.twitch.model.PlaybackAccessTokenRequestTemplate;
 
@@ -24,16 +27,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class VideoDownloader {
+public class VodDownloader {
     public ChannelDownloader channelDownloader;
     public Video video;
     public Vod vod;
     public Stream stream;
+    public ChatDownloader chatDownloader;
     public final List<PartDownloader> parts = new ArrayList<>();
 
-    public VideoDownloader(ChannelDownloader channelDownloader, Video video, Vod vod, Stream stream) {
+    public static final Pattern durationPattern = Pattern.compile("#EXT-X-TWITCH-TOTAL-SECS:([0-9.]+)");
+
+    public VodDownloader(ChannelDownloader channelDownloader, Video video, Vod vod, Stream stream) {
         this.channelDownloader = channelDownloader;
         this.video = video;
         this.vod = vod;
@@ -42,7 +49,10 @@ public class VideoDownloader {
         // Don't download if it's already downloaded
         if (vod.downloaded) return;
 
-        Archiver.downloadExecutor.submit(this::run);
+        chatDownloader = new ChatDownloader(this);
+
+        // TODO don't forget to uncomment this, it's just commented for chat testing
+        Archiver.downloadExecutor.submit(this::run, null, DownloadPriority.VOD.priority);
     }
 
     public void run() {
@@ -112,7 +122,7 @@ public class VideoDownloader {
             HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Accept", "*/*");
-            connection.setRequestProperty("Client-ID", "kimne78kx3ncx6brgo4mv6wki5h1ko"); // Twitch's client id
+            connection.setRequestProperty("Client-ID", Archiver.TWITCH_CLIENT_ID); // Twitch's client id
             connection.setRequestProperty("Content-Type", "text/plain;charset=UTF-8");
             connection.setDoOutput(true);
             OutputStream outputStream = connection.getOutputStream();
@@ -136,6 +146,7 @@ public class VideoDownloader {
         int partsCompleted = getPartsCompleted();
         //Archiver.LOGGER.info("Video {} is {}% complete ({}/{})", video.getId(), (int) Math.round(((double) partsCompleted / (double) parts.size()) * 100), partsCompleted, parts.size());
         if (partsCompleted < parts.size()) return;
+        if (!chatDownloader.done) return;
 
         Archiver.LOGGER.info("Completed downloading vod {} on channel {}", vod.id, vod.channelId);
         if (stream != null) {
@@ -149,8 +160,8 @@ public class VideoDownloader {
         Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FINISH, vod);
         vod.setDownloaded();
 
-        synchronized (channelDownloader.videoDownloaders) {
-            channelDownloader.videoDownloaders.remove(this);
+        synchronized (channelDownloader.vodDownloaders) {
+            channelDownloader.vodDownloaders.remove(this);
         }
 
         Archiver.instance.transcodeManager.transcode(vod);

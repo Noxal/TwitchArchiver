@@ -21,6 +21,7 @@ import sr.will.archiver.sql.Migrations;
 import sr.will.archiver.twitch.ChannelDownloader;
 import sr.will.archiver.twitch.EventHandler;
 import sr.will.archiver.util.FileUtil;
+import sr.will.archiver.util.PriorityThreadPoolExecutor;
 import sr.will.archiver.youtube.YouTubeManager;
 
 import java.sql.ResultSet;
@@ -30,18 +31,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 public class Archiver {
     public static Archiver instance;
 
+    public static final String TWITCH_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
     public static final Logger LOGGER = LoggerFactory.getLogger("Archiver");
     public static final Gson GSON = new GsonBuilder().create();
 
-    public static ThreadPoolExecutor downloadExecutor;
+    public static PriorityThreadPoolExecutor downloadExecutor;
     public static ThreadPoolExecutor transcodeExecutor;
     public static ThreadPoolExecutor uploadExecutor;
     public static ScheduledThreadPoolExecutor scheduledExecutor;
@@ -66,7 +66,27 @@ public class Archiver {
 
         Migrations.deploy();
 
-        downloadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.download.threads, new ThreadFactoryBuilder().setNameFormat("download-%d").build());
+        downloadExecutor = new PriorityThreadPoolExecutor(
+                Archiver.config.download.threads,
+                Archiver.config.download.threads,
+                1,
+                TimeUnit.SECONDS,
+                new PriorityBlockingQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat("download-%d").build()
+        );
+        /*
+        downloadExecutor = new ThreadPoolExecutor(
+                Archiver.config.download.threads,
+                Archiver.config.download.threads,
+                1,
+                TimeUnit.SECONDS,
+                new PriorityBlockingQueue<Runnable>(0, Comparator.comparing(Downloader::getPriority))),
+                new ThreadFactoryBuilder().setNameFormat("download-%d").build()
+        );
+         */
+        downloadExecutor.prestartAllCoreThreads();
+        //transcodeExecutor = new ThreadPoolExecutor(0, Archiver.config.transcode.threads, 1, TimeUnit.SECONDS, new ThreadFactoryBuilder().setNameFormat("transcode-%d").build());
+        //downloadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.download.threads, new ThreadFactoryBuilder().setNameFormat("download-%d").build());
         transcodeExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.transcode.threads, new ThreadFactoryBuilder().setNameFormat("transcode-%d").build());
         uploadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.upload.threads, new ThreadFactoryBuilder().setNameFormat("upload-%d").build());
         scheduledExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(10, new ThreadFactoryBuilder().setNameFormat("scheduled-%d").build());
@@ -125,7 +145,7 @@ public class Archiver {
             channelDownloaders.add(new ChannelDownloader(user, stream));
         }
 
-        Archiver.LOGGER.info("Queued {} channel downloads", users.getUsers().size());
+        Archiver.LOGGER.info("Queued {} channel downloads", channelDownloaders.size());
     }
 
     public ChannelDownloader getChannelDownloader(String channelId) {

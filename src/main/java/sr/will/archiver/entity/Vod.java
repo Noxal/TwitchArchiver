@@ -41,15 +41,18 @@ public class Vod {
     }
 
     public void setDownloaded() {
+        this.downloaded = true;
         Archiver.database.execute("UPDATE vods SET downloaded = 1 WHERE id = ?;", id);
     }
 
     public void setTranscoded(int parts) {
+        this.transcoded = true;
         this.parts = parts;
         Archiver.database.execute("UPDATE vods SET transcoded = 1, parts = ? WHERE id = ?;", parts, id);
     }
 
     public void setUploaded() {
+        this.uploaded = true;
         Archiver.database.execute("UPDATE vods SET uploaded = 1 WHERE id = ?;", id);
     }
 }

@@ -7,6 +7,7 @@ import com.github.twitch4j.helix.domain.VideoList;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.config.Config;
 import sr.will.archiver.entity.Vod;
+import sr.will.archiver.twitch.vod.VodDownloader;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -16,10 +17,10 @@ public class ChannelDownloader {
     public User user;
     public Stream stream;
     public Config.ArchiveSet archiveSet;
-    public final List<VideoDownloader> videoDownloaders = new ArrayList<>();
+    public final List<VodDownloader> vodDownloaders = new ArrayList<>();
     public List<Vod> vods;
 
-    public VideoDownloader liveDownloader;
+    public VodDownloader liveDownloader;
 
     public ChannelDownloader(User user, Stream stream) {
         this.user = user;
@@ -31,7 +32,7 @@ public class ChannelDownloader {
             return;
         }
 
-        Archiver.downloadExecutor.submit(this::run);
+        Archiver.downloadExecutor.submit(this::run, null, DownloadPriority.CHANNEL.priority);
     }
 
     public void run() {
@@ -41,7 +42,7 @@ public class ChannelDownloader {
 
         Archiver.LOGGER.info("Got {} videos from channel {}", videos.getVideos().size(), user.getId());
         for (Video video : videos.getVideos()) {
-            if (videoDownloaders.stream().anyMatch(downloader -> downloader.video.getId().equals(video.getId()))) {
+            if (vodDownloaders.stream().anyMatch(downloader -> downloader.video.getId().equals(video.getId()))) {
                 // Video downloader already exists, don't create it again
                 Archiver.LOGGER.info("Downloader already exists, skipping");
                 continue;
@@ -51,17 +52,20 @@ public class ChannelDownloader {
             vods.remove(vod);
             if (stream != null && video.getStreamId().equals(stream.getId())) {
                 // vod has a current stream associated
-                liveDownloader = new VideoDownloader(this, video, vod, stream);
-                videoDownloaders.add(liveDownloader);
+                liveDownloader = new VodDownloader(this, video, vod, stream);
+                vodDownloaders.add(liveDownloader);
             } else {
                 // no current stream
-                videoDownloaders.add(new VideoDownloader(this, video, vod, null));
+                vodDownloaders.add(new VodDownloader(this, video, vod, null));
             }
         }
 
         // Handle vods that have been deleted from twitch but are still in the db
+        if (vods.size() > 0)
+            Archiver.LOGGER.info("Got an additional {} videos that have been deleted from twitch", vods.size());
         for (Vod vod : vods) {
-            videoDownloaders.add(new VideoDownloader(this, null, vod, null));
+            Archiver.LOGGER.info("deleted vod: {} ({})", vod.title, vod.id);
+            vodDownloaders.add(new VodDownloader(this, null, vod, null));
         }
     }
 
