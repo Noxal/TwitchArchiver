@@ -30,8 +30,6 @@ public class PartDownloader {
     }
 
     public void run() {
-        Archiver.LOGGER.info("Started downloading part {} for video {} on channel {}", name, videoDownloader.vod.id, videoDownloader.vod.channelId);
-
         try {
             File file = new File(videoDownloader.vod.getDownloadDir(), name);
             if (file.exists()) {

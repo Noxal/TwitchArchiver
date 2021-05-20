@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -38,7 +39,7 @@ public class VodDownloader {
     public ChatDownloader chatDownloader;
     public final List<PartDownloader> parts = new ArrayList<>();
 
-    public static final Pattern durationPattern = Pattern.compile("#EXT-X-TWITCH-TOTAL-SECS:([0-9.]+)");
+    public static final String durationPattern = "#EXT-X-TWITCH-TOTAL-SECS:([0-9.]+)";
 
     public VodDownloader(ChannelDownloader channelDownloader, Video video, Vod vod, Stream stream) {
         this.channelDownloader = channelDownloader;
@@ -60,7 +61,8 @@ public class VodDownloader {
 
         PlaybackAccessToken vodToken = getVodToken();
         String baseURL = getM3u8(vodToken);
-        downloadParts(baseURL);
+        //downloadParts(baseURL);
+        chatDownloader.run();
     }
 
     public void downloadParts(String baseURL) {
@@ -140,6 +142,33 @@ public class VodDownloader {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public float getDuration() {
+        try {
+            File file = new File(vod.getDownloadDir(), "index-original.m3u8");
+            float duration = 0;
+            Scanner scanner = new Scanner(file);
+            while (scanner.hasNext()) {
+                String line = scanner.nextLine();
+                if (line.matches(durationPattern)) {
+                    Matcher matcher = Pattern.compile(durationPattern).matcher(line);
+                    if (matcher.find()) {
+                        duration = Float.parseFloat(matcher.group(1));
+                        break;
+                    }
+                }
+            }
+
+            scanner.close();
+            return duration;
+        } catch (IOException e) {
+            Archiver.LOGGER.error("Failed to get duration of vod {} on channel {}", vod.id, vod.channelId);
+            Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FAIL, vod);
+            e.printStackTrace();
+        }
+
+        return 0;
     }
 
     public void checkCompleted() {

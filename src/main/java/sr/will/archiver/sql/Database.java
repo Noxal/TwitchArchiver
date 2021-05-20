@@ -103,6 +103,10 @@ public class Database {
                 statement.setInt(x + 1, (Integer) params[x]);
             } else if (params[x] instanceof Long) {
                 statement.setLong(x + 1, (Long) params[x]);
+            } else if (params[x] instanceof Double) {
+                statement.setDouble(x + 1, (Double) params[x]);
+            } else if (params[x] instanceof Float) {
+                statement.setFloat(x + 1, (Float) params[x]);
             } else if (params[x] instanceof Boolean) {
                 statement.setBoolean(x + 1, (Boolean) params[x]);
             } else {

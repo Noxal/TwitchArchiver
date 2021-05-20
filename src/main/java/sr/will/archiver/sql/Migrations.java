@@ -55,12 +55,13 @@ public class Migrations {
                 "parts int NOT NULL DEFAULT 0," +
                 "PRIMARY KEY (id));");
         Archiver.database.execute("CREATE TABLE IF NOT EXISTS chat(" +
-                "id int NOT NULL AUTO_INCREMENT," +
-                "vod_id int NOT NULL," +
-                "timestamp bigint(20) NOT NULL," +
-                "author varchar(25) NOT NULL," +
-                "message varchar(500) NOT NULL," +
+                "id char(36) NOT NULL," + // message UUID
+                "channel int NOT NULL," + // channel ID
+                "vod int NOT NULL," + // VOD ID
+                "offset float NOT NULL," + // offset in seconds from the beginning of the vod
+                "author varchar(25) NOT NULL," + // author display name
+                "message longtext NOT NULL," + // json blob of the message
                 "PRIMARY KEY (id)," +
-                "FOREIGN KEY (vod_id) REFERENCES vods(id));");
+                "FOREIGN KEY (vod) REFERENCES vods(id));");
     }
 }
