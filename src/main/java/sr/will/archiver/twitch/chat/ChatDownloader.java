@@ -14,12 +14,9 @@ public class ChatDownloader {
     public final List<ChatSectionDownloader> sections = new ArrayList<>();
     public final List<UUID> comments = new ArrayList<>();
     public boolean done = false;
-    private long started;
 
     public ChatDownloader(VodDownloader vodDownloader) {
         this.vodDownloader = vodDownloader;
-
-        started = System.currentTimeMillis();
     }
 
     public void run() {
@@ -33,15 +30,12 @@ public class ChatDownloader {
 
         // Start at the beginning of the video going forward
         sections.add(new ChatSectionDownloader(this, Direction.FORWARD, null, offset));
-        Archiver.LOGGER.info("Started chat downloader going forward at offset {}", offset);
 
         // Start at the end of the video going backwards
         sections.add(new ChatSectionDownloader(this, Direction.BACKWARD, null, duration));
-        Archiver.LOGGER.info("Started chat downloader going forward at backward {}", duration);
 
         // Start at the middle going both directions
-        sections.add(new ChatSectionDownloader(this, Direction.BOTH, null, (duration - offset) / 2));
-        Archiver.LOGGER.info("Started chat downloader going both at offset {}", (duration - offset) / 2);
+        sections.add(new ChatSectionDownloader(this, Direction.BOTH, null, ((duration - offset) / 2) + offset));
     }
 
     public float getChatStartOffset() {
@@ -60,7 +54,6 @@ public class ChatDownloader {
         if (partsCompleted < sections.size()) return;
 
         Archiver.LOGGER.info("Done downloading chat, requests: {}, comments: {}", sections.size(), comments.size());
-        Archiver.LOGGER.info("Took {}ms", System.currentTimeMillis() - started);
 
         comments.clear();
 

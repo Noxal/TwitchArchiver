@@ -19,6 +19,7 @@ public class ChatSectionDownloader {
     public final String cursor;
     public final double offset;
     public boolean done = false;
+    private int retries = 0;
 
     public ChatSectionDownloader(ChatDownloader chatDownloader, Direction direction, String cursor, double offset) {
         this.chatDownloader = chatDownloader;
@@ -89,9 +90,16 @@ public class ChatSectionDownloader {
 
             insertMessages(comments);
         } catch (Exception e) {
-            Archiver.LOGGER.error("Unable to get chat for vod {} on channel {}", chatDownloader.vodDownloader.vod.id, chatDownloader.vodDownloader.vod.channelId);
-            Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FAIL, chatDownloader.vodDownloader.vod);
-            e.printStackTrace();
+            if (retries >= 3) {
+                Archiver.LOGGER.warn("Failed to download chat for video {} on channel {} (Attempted {} times)", chatDownloader.vodDownloader.vod.id, chatDownloader.vodDownloader.vod.channelId, retries + 1);
+                e.printStackTrace();
+                Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FAIL, chatDownloader.vodDownloader.vod);
+                return;
+            }
+
+            retries++;
+            Archiver.LOGGER.warn("Failed to download chat for video {} on channel {}, adding back to queue (attempt {})", chatDownloader.vodDownloader.vod.id, chatDownloader.vodDownloader.vod.channelId, retries + 1);
+            Archiver.downloadExecutor.submit(this::run);
         }
     }
 
