@@ -32,7 +32,7 @@ public class ChannelDownloader {
             return;
         }
 
-        Archiver.downloadExecutor.submit(this::run, null, DownloadPriority.CHANNEL.priority);
+        Archiver.downloadExecutor.submit(this::run);
     }
 
     public void run() {

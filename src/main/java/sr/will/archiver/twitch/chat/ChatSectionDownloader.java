@@ -2,7 +2,6 @@ package sr.will.archiver.twitch.chat;
 
 import sr.will.archiver.Archiver;
 import sr.will.archiver.notification.NotificationEvent;
-import sr.will.archiver.twitch.DownloadPriority;
 import sr.will.archiver.twitch.model.Comments;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -27,7 +26,7 @@ public class ChatSectionDownloader {
         this.cursor = cursor;
         this.offset = offset;
 
-        Archiver.downloadExecutor.submit(this::run, null, DownloadPriority.CHAT_PART.priority);
+        Archiver.chatDownloadExecutor.submit(this::run);
     }
 
     public void run() {

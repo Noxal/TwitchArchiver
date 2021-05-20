@@ -3,6 +3,8 @@ package sr.will.archiver.entity;
 import sr.will.archiver.Archiver;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 public class Vod {
     public final String id;
@@ -36,7 +38,7 @@ public class Vod {
     }
 
     public Vod create() {
-        Archiver.database.execute("INSERT INTO vods (id, channel_id, created_at, title, description) VALUES (?, ?, ?, ?, ?);", id, channelId, createdAt.getEpochSecond(), title, description);
+        Archiver.database.execute("INSERT IGNORED INTO vods (id, channel_id, created_at, title, description) VALUES (?, ?, ?, ?, ?);", id, channelId, createdAt.toEpochMilli(), title, description);
         return this;
     }
 
@@ -54,5 +56,19 @@ public class Vod {
     public void setUploaded() {
         this.uploaded = true;
         Archiver.database.execute("UPDATE vods SET uploaded = 1 WHERE id = ?;", id);
+    }
+
+    public String getReplacedString(String original) {
+        return original
+                .replace("{title}", title)
+                .replace("{user}", Archiver.instance.usernames.get(channelId))
+                .replace("{description}", description)
+                .replace("{parts}", parts + "")
+                .replace("{date}", getTimeString(Archiver.config.upload.dateFormat))
+                .replace("{time}", getTimeString(Archiver.config.upload.timeFormat));
+    }
+
+    public String getTimeString(String format) {
+        return DateTimeFormatter.ofPattern(format).withZone(ZoneId.systemDefault()).format(createdAt);
     }
 }

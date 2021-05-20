@@ -9,7 +9,6 @@ import sr.will.archiver.Archiver;
 import sr.will.archiver.entity.Vod;
 import sr.will.archiver.notification.NotificationEvent;
 import sr.will.archiver.twitch.ChannelDownloader;
-import sr.will.archiver.twitch.DownloadPriority;
 import sr.will.archiver.twitch.chat.ChatDownloader;
 import sr.will.archiver.twitch.model.PlaybackAccessToken;
 import sr.will.archiver.twitch.model.PlaybackAccessTokenRequestTemplate;
@@ -52,8 +51,7 @@ public class VodDownloader {
 
         chatDownloader = new ChatDownloader(this);
 
-        // TODO don't forget to uncomment this, it's just commented for chat testing
-        Archiver.downloadExecutor.submit(this::run, null, DownloadPriority.VOD.priority);
+        Archiver.downloadExecutor.submit(this::run);
     }
 
     public void run() {

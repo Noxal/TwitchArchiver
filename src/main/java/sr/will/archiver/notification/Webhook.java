@@ -19,8 +19,6 @@ public abstract class Webhook {
     protected abstract void run(NotificationEvent event, String message, Vod vod, Stream stream);
 
     protected String replace(NotificationEvent event, Vod vod, Stream stream) {
-        return event.message
-                .replace("{user}", Archiver.instance.usernames.get(vod.channelId))
-                .replace("{title}", vod.title);
+        return vod.getReplacedString(event.message);
     }
 }

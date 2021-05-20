@@ -65,10 +65,12 @@ public class Config {
 
     public static class Download {
         public int threads = 5;
+        public int chatThreads = 10;
         public String directory = "downloads";
 
         public void validate() {
             if (threads <= 0) throw new RuntimeException("Cannot have less than 1 download thread");
+            if (chatThreads <= 0) throw new RuntimeException("Cannot have less than 1 chat download thread");
         }
     }
 

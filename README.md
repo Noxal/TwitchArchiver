@@ -3,7 +3,10 @@
 This program is designed to download twitch vods, transcode them, and optionally upload them to youtube.
 
 ## Configuration
-The default configuration will be generated automatically on initial startup. The following can be used as a reference for configuration options that are not readily obvious.
+
+The default configuration will be generated automatically on initial startup. The following can be used as a reference
+for configuration options that are not readily obvious.
+
 ```json
 {
   "twitch": {

@@ -2,7 +2,6 @@ package sr.will.archiver.twitch.vod;
 
 import org.apache.commons.io.FileUtils;
 import sr.will.archiver.Archiver;
-import sr.will.archiver.twitch.DownloadPriority;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,7 +25,7 @@ public class PartDownloader {
             return;
         }
 
-        Archiver.downloadExecutor.submit(this::run, null, DownloadPriority.VOD_PART.priority);
+        Archiver.downloadExecutor.submit(this::run);
     }
 
     public void run() {
@@ -46,7 +45,7 @@ public class PartDownloader {
 
             retries++;
             Archiver.LOGGER.warn("Failed to download part {} for video {} on channel {}, adding back to queue (attempt {})", name, videoDownloader.video.getId(), videoDownloader.video.getUserLogin(), retries + 1);
-            Archiver.downloadExecutor.submit(this::run, null, 10);
+            Archiver.downloadExecutor.submit(this::run);
         }
     }
 
