@@ -20,6 +20,9 @@ public class ChatDownloader {
     }
 
     public void run() {
+        // reset done variable for livestreams
+        done = false;
+
         float offset = 0;
         if (vodDownloader.stream != null) {
             // Stream is live, check what the the offset of the last comment was
@@ -55,7 +58,7 @@ public class ChatDownloader {
 
         Archiver.LOGGER.info("Done downloading chat, requests: {}, comments: {}", sections.size(), comments.size());
 
-        comments.clear();
+        if (vodDownloader.stream == null) comments.clear();
 
         done = true;
         vodDownloader.checkCompleted();
