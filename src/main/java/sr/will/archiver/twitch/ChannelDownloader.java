@@ -11,7 +11,9 @@ import sr.will.archiver.twitch.vod.VodDownloader;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ChannelDownloader {
     public User user;
@@ -19,8 +21,6 @@ public class ChannelDownloader {
     public Config.ArchiveSet archiveSet;
     public final List<VodDownloader> vodDownloaders = new ArrayList<>();
     public List<Vod> vods;
-
-    public VodDownloader liveDownloader;
 
     public ChannelDownloader(User user, Stream stream) {
         this.user = user;
@@ -52,8 +52,7 @@ public class ChannelDownloader {
             vods.remove(vod);
             if (stream != null && video.getStreamId().equals(stream.getId())) {
                 // vod has a current stream associated
-                liveDownloader = new VodDownloader(this, video, vod, stream);
-                vodDownloaders.add(liveDownloader);
+                vodDownloaders.add(new VodDownloader(this, video, vod, stream));
             } else {
                 // no current stream
                 vodDownloaders.add(new VodDownloader(this, video, vod, null));
@@ -82,9 +81,26 @@ public class ChannelDownloader {
         //
         // Fastest time is just the goOfflineDelay, slowest time is goOfflineDelay + liveCheckInterval
 
+        List<VodDownloader> liveVods = vodDownloaders.stream()
+                .filter(downloader -> downloader.stream != null)
+                .sorted(Comparator.comparing(downloader -> downloader.vod.createdAt))
+                .collect(Collectors.toList());
+
+        // TODO remove this bit after testing
+        Archiver.LOGGER.info("Got {} vods marked as live", liveVods.size());
+        for (VodDownloader downloader : liveVods) {
+            Archiver.LOGGER.info("vod {} start time: {}", downloader.vod.id, downloader.vod.createdAt);
+        }
+
         stream = null;
-        liveDownloader.stream = null;
-        liveDownloader = null;
+
+        if (liveVods.size() == 0) {
+            Archiver.LOGGER.error("Attempted to mark stream as complete, but no vods are marked as streaming");
+            return;
+        }
+
+        Archiver.LOGGER.info("Marking last vod as complete");
+        liveVods.get(liveVods.size() - 1).stream = null;
     }
 
     public Vod getVod(String vodId, Instant createdAt, String title, String description) {

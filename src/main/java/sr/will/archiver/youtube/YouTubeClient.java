@@ -20,11 +20,11 @@ import java.util.List;
 
 public class YouTubeClient {
     private final YouTubeManager manager;
-    public final Config.ArchiveSet.Google google;
+    public final Config.ArchiveSet.YouTube.Google google;
     public final List<VideoUploader> uploaders = new ArrayList<>();
     public YouTube youTube;
 
-    public YouTubeClient(YouTubeManager manager, Config.ArchiveSet.Google google) {
+    public YouTubeClient(YouTubeManager manager, Config.ArchiveSet.YouTube.Google google) {
         this.manager = manager;
         this.google = google;
 

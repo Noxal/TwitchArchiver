@@ -13,6 +13,7 @@ import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sr.will.archiver.config.Config;
+import sr.will.archiver.deleter.DeletionManager;
 import sr.will.archiver.entity.Vod;
 import sr.will.archiver.ffmpeg.TranscodeManager;
 import sr.will.archiver.notification.WebhookManager;
@@ -57,6 +58,7 @@ public class Archiver {
     public final TranscodeManager transcodeManager;
     public final YouTubeManager youTubeManager;
     public final WebhookManager webhookManager;
+    public final DeletionManager deletionManager;
 
     public Archiver() {
         instance = this;
@@ -78,6 +80,7 @@ public class Archiver {
         initializeTwitchClient();
         transcodeManager = new TranscodeManager();
         youTubeManager = new YouTubeManager();
+        deletionManager = new DeletionManager();
 
         LOGGER.info("Done after {}ms!", System.currentTimeMillis() - startTime);
     }

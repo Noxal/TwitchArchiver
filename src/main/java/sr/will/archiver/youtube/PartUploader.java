@@ -44,16 +44,16 @@ public class PartUploader {
             Video video = new Video();
 
             VideoSnippet snippet = new VideoSnippet();
-            snippet.setTitle(getReplacedString(archiveSet.title));
-            snippet.setDescription(getReplacedString(archiveSet.description));
-            snippet.setCategoryId(archiveSet.category);
-            snippet.setTags(archiveSet.tags);
+            snippet.setTitle(getReplacedString(archiveSet.youTube.title));
+            snippet.setDescription(getReplacedString(archiveSet.youTube.description));
+            snippet.setCategoryId(archiveSet.youTube.category);
+            snippet.setTags(archiveSet.youTube.tags);
             video.setSnippet(snippet);
 
             VideoStatus status = new VideoStatus();
-            status.setPrivacyStatus(archiveSet.publicVideo ? "public" : "unlisted");
-            status.setEmbeddable(archiveSet.embeddable);
-            status.setMadeForKids(archiveSet.madeForKids);
+            status.setPrivacyStatus(archiveSet.youTube.publicVideo ? "public" : "unlisted");
+            status.setEmbeddable(archiveSet.youTube.embeddable);
+            status.setMadeForKids(archiveSet.youTube.madeForKids);
             video.setStatus(status);
 
             File mediaFile = new File(vod.getTranscodeDir(), vod.id + "-" + part + ".mp4");

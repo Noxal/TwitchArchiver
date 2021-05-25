@@ -39,19 +39,42 @@ public class Config {
         public String twitchUser;
         public int numVideos = 2;
         public boolean upload = false;
-        public Google google = new Google();
-        public String title = "{date}: {title} Part {part}/{parts}";
-        public String description = "Twitch vod streamed by {user} on {date}, {time}.\nVOD description: {description}";
-        public String category = "20";
-        public List<String> tags = Arrays.asList("Gaming", "Twitch");
-        public boolean madeForKids = false;
-        public boolean embeddable = true;
-        @SerializedName("public")
-        public boolean publicVideo = false;
+        public YouTube youTube = new YouTube();
+        public Deletion deletion = new Deletion();
 
-        public static class Google {
-            public String clientId = "GOOGLE_CLIENT_ID";
-            public String clientSecret = "GOOGLE_CLIENT_SECRET";
+        public static class YouTube {
+            public Google google = new Google();
+
+            public String title = "{date}: {title} Part {part}/{parts}";
+            public String description = "Twitch vod streamed by {user} on {date}, {time}.\nVOD description: {description}";
+            public String category = "20";
+            public List<String> tags = Arrays.asList("Gaming", "Twitch");
+            public boolean madeForKids = false;
+            public boolean embeddable = true;
+            @SerializedName("public")
+            public boolean publicVideo = false;
+
+            public static class Google {
+                public String clientId = "GOOGLE_CLIENT_ID";
+                public String clientSecret = "GOOGLE_CLIENT_SECRET";
+            }
+
+            public void validate() {
+                if (google == null) google = new Google();
+            }
+        }
+
+        public static class Deletion {
+            public Mode mode = Mode.BOTH_MAX;
+            public int maxNum = 2;
+            public int maxAge = 7;
+
+            public enum Mode {
+                NUMBER,
+                AGE,
+                BOTH_MIN,
+                BOTH_MAX
+            }
         }
 
         public ArchiveSet(String twitchUser) {
@@ -59,7 +82,10 @@ public class Config {
         }
 
         public void validate() {
-            if (google == null) google = new Google();
+            if (youTube == null) youTube = new YouTube();
+            if (deletion == null) deletion = new Deletion();
+
+            youTube.validate();
         }
     }
 
@@ -130,7 +156,7 @@ public class Config {
     }
 
     public static class Times {
-        public int goLiveDelay = 5;
+        public int goLiveDelay = 6;
         public int goOfflineDelay = 6;
         public int liveCheckInterval = 6;
     }

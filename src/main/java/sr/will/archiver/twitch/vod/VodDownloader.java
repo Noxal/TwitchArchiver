@@ -26,19 +26,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class VodDownloader {
     public ChannelDownloader channelDownloader;
     public Video video;
     public Vod vod;
+    public PlaylistInfo playlistInfo;
     public Stream stream;
     public ChatDownloader chatDownloader;
     public final List<PartDownloader> parts = new ArrayList<>();
-
-    public static final String durationPattern = "#EXT-X-TWITCH-TOTAL-SECS:([0-9.]+)";
 
     public VodDownloader(ChannelDownloader channelDownloader, Video video, Vod vod, Stream stream) {
         this.channelDownloader = channelDownloader;
@@ -58,12 +55,12 @@ public class VodDownloader {
         Archiver.LOGGER.info("Starting download for vod {} on channel {} {}", vod.id, vod.channelId, stream == null ? "" : "Currently streaming");
 
         PlaybackAccessToken vodToken = getVodToken();
-        String baseURL = getM3u8(vodToken);
-        downloadParts(baseURL);
+        playlistInfo = getM3u8(vodToken);
+        downloadParts();
         chatDownloader.run();
     }
 
-    public void downloadParts(String baseURL) {
+    public void downloadParts() {
         try {
             List<String> files = Files.lines(new File(vod.getDownloadDir(), "index-original.m3u8").toPath())
                     .filter(line -> !line.isEmpty() && !line.startsWith("#"))
@@ -82,7 +79,7 @@ public class VodDownloader {
             }
 
             for (int x = parts.size(); x < files.size(); x++) {
-                parts.add(new PartDownloader(this, baseURL, files.get(x)));
+                parts.add(new PartDownloader(this, playlistInfo.baseURL, files.get(x)));
             }
 
             checkCompleted();
@@ -93,7 +90,7 @@ public class VodDownloader {
         }
     }
 
-    public String getM3u8(PlaybackAccessToken token) {
+    public PlaylistInfo getM3u8(PlaybackAccessToken token) {
         try {
             URL url = new URL("https://usher.ttvnw.net/vod/" + video.getId() + ".m3u8?" +
                     "allow_source=true&player=twitchweb&playlist_include_framerate=true&allow_spectre=true" +
@@ -106,7 +103,7 @@ public class VodDownloader {
                 if (line.startsWith("#")) continue;
                 File file = new File(vod.getDownloadDir(), "index-original.m3u8");
                 FileUtils.copyURLToFile(new URL(line), file);
-                return line.substring(0, line.lastIndexOf('/') + 1);
+                return new PlaylistInfo(this, file, line.substring(0, line.lastIndexOf('/') + 1));
             }
         } catch (IOException e) {
             Archiver.LOGGER.error("Failed to get M3u8 playlist for vod {} on channel {}", vod.id, vod.channelId);
@@ -140,33 +137,6 @@ public class VodDownloader {
             e.printStackTrace();
         }
         return null;
-    }
-
-    public float getDuration() {
-        try {
-            File file = new File(vod.getDownloadDir(), "index-original.m3u8");
-            float duration = 0;
-            Scanner scanner = new Scanner(file);
-            while (scanner.hasNext()) {
-                String line = scanner.nextLine();
-                if (line.matches(durationPattern)) {
-                    Matcher matcher = Pattern.compile(durationPattern).matcher(line);
-                    if (matcher.find()) {
-                        duration = Float.parseFloat(matcher.group(1));
-                        break;
-                    }
-                }
-            }
-
-            scanner.close();
-            return duration;
-        } catch (IOException e) {
-            Archiver.LOGGER.error("Failed to get duration of vod {} on channel {}", vod.id, vod.channelId);
-            Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FAIL, vod);
-            e.printStackTrace();
-        }
-
-        return 0;
     }
 
     public void checkCompleted() {

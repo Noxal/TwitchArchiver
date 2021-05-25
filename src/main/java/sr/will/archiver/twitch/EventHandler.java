@@ -29,8 +29,10 @@ public class EventHandler {
         // To account for this we check if there's a current livestream going with the same id
         StreamList streams = Archiver.twitchClient.getHelix().getStreams(null, null, null, null, null, null, Collections.singletonList(event.getChannel().getId()), null).execute();
         ChannelDownloader channelDownloader = Archiver.instance.getChannelDownloader(event.getChannel().getId());
-        if (!streams.getStreams().isEmpty() && streams.getStreams().get(0).getId().equals(channelDownloader.liveDownloader.stream.getId()))
+        if (!streams.getStreams().isEmpty() && streams.getStreams().get(0).getId().equals(channelDownloader.stream.getId())) {
+            Archiver.LOGGER.warn("Got channel offline event for {}'s stream that still appears to be live, ignoring", event.getChannel().getName());
             return;
+        }
 
         Archiver.LOGGER.info("{} just stopped streaming, will stop vod checking in {} minutes", event.getChannel().getName(), Archiver.config.times.goOfflineDelay);
         Archiver.scheduledExecutor.schedule(
@@ -39,6 +41,6 @@ public class EventHandler {
                 TimeUnit.MINUTES
         );
 
-        Archiver.instance.webhookManager.execute(NotificationEvent.STREAM_END, channelDownloader.liveDownloader.vod, channelDownloader.liveDownloader.stream);
+        Archiver.instance.webhookManager.execute(NotificationEvent.STREAM_END, NotificationEvent.STREAM_END.message.replace("{user}", event.getChannel().getName()));
     }
 }

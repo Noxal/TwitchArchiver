@@ -24,9 +24,9 @@ public class YouTubeManager {
             if (!archiveSet.upload) continue;
 
             // Don't create multiple clients for the same client id
-            if (clients.containsKey(archiveSet.google.clientId)) continue;
+            if (clients.containsKey(archiveSet.youTube.google.clientId)) continue;
 
-            clients.put(archiveSet.google.clientId, new YouTubeClient(this, archiveSet.google));
+            clients.put(archiveSet.youTube.google.clientId, new YouTubeClient(this, archiveSet.youTube.google));
         }
 
         Archiver.LOGGER.info("Created {} youtube clients", clients.size());
@@ -45,6 +45,6 @@ public class YouTubeManager {
             return;
         }
 
-        if (archiveSet.upload) clients.get(archiveSet.google.clientId).upload(vod);
+        if (archiveSet.upload) clients.get(archiveSet.youTube.google.clientId).upload(vod);
     }
 }

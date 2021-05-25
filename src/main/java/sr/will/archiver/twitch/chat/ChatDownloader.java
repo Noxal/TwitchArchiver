@@ -29,16 +29,14 @@ public class ChatDownloader {
             offset = getChatStartOffset();
         }
 
-        float duration = vodDownloader.getDuration();
-
         // Start at the beginning of the video going forward
         sections.add(new ChatSectionDownloader(this, Direction.FORWARD, null, offset));
 
         // Start at the end of the video going backwards
-        sections.add(new ChatSectionDownloader(this, Direction.BACKWARD, null, duration));
+        sections.add(new ChatSectionDownloader(this, Direction.BACKWARD, null, vodDownloader.playlistInfo.duration));
 
         // Start at the middle going both directions
-        sections.add(new ChatSectionDownloader(this, Direction.BOTH, null, ((duration - offset) / 2) + offset));
+        sections.add(new ChatSectionDownloader(this, Direction.BOTH, null, ((vodDownloader.playlistInfo.duration - offset) / 2) + offset));
     }
 
     public float getChatStartOffset() {
