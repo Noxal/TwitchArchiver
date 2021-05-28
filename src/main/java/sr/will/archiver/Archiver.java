@@ -53,6 +53,7 @@ public class Archiver {
 
     public static Config config;
 
+    public final Map<String, Vod> vods = new HashMap<>();
     public final Map<String, String> usernames = new HashMap<>();
     public final List<ChannelDownloader> channelDownloaders = new ArrayList<>();
     public final TranscodeManager transcodeManager;
@@ -83,6 +84,8 @@ public class Archiver {
         deletionManager = new DeletionManager();
 
         LOGGER.info("Done after {}ms!", System.currentTimeMillis() - startTime);
+        LOGGER.info("The following line is to fool pterodactyl into thinking that the server has started successfully");
+        LOGGER.info(")! For help, type ");
     }
 
     public void stop() {
@@ -108,10 +111,10 @@ public class Archiver {
 
     public void initializeTwitchClient() {
         twitchClient = TwitchClientBuilder.builder()
-                .withClientId(config.twitch.clientId)
-                .withClientSecret(config.twitch.clientSecret)
-                .withEnableHelix(true)
-                .build();
+                               .withClientId(config.twitch.clientId)
+                               .withClientSecret(config.twitch.clientSecret)
+                               .withEnableHelix(true)
+                               .build();
         twitchClient.getEventManager().getEventHandler(SimpleEventHandler.class).registerListener(new EventHandler());
 
         LOGGER.info("Getting user info...");
@@ -143,10 +146,10 @@ public class Archiver {
     }
 
     public static List<Vod> getVods(ResultSet resultSet) {
-        List<Vod> vods = new ArrayList<>();
+        List<Vod> vodList = new ArrayList<>();
         try {
             while (resultSet.next()) {
-                vods.add(new Vod(
+                vodList.add(new Vod(
                         resultSet.getString("id"),
                         resultSet.getString("channel_id"),
                         Instant.ofEpochMilli(resultSet.getLong("created_at")),
@@ -162,7 +165,43 @@ public class Archiver {
             e.printStackTrace();
         }
 
-        return vods;
+        return vodList;
+    }
+
+    public List<Vod> getVods(List<String> vodIds) {
+        List<Vod> vodList = new ArrayList<>();
+
+        StringBuilder queryBuilder = new StringBuilder("SELECT * FROM vods WHERE (");
+        List<String> queryObjects = new ArrayList<>();
+
+        for (String vodId : vodIds) {
+            if (vods.containsKey(vodId)) {
+                // If we already have the vod locally use that
+                vodList.add(vods.get(vodId));
+            } else {
+                // Otherwise add it to the query to get from the db
+                queryBuilder.append("id = ? OR");
+                queryObjects.add(vodId);
+            }
+        }
+
+        // If we're not getting any vods from the db we don't need to do anything else
+        if (queryObjects.size() == 0) return vodList;
+
+        queryBuilder.delete(queryBuilder.length() - 3, queryBuilder.length());
+        queryBuilder.append(");");
+
+
+        vodList.addAll(getVods(database.query(queryBuilder.toString(), queryObjects.toArray())));
+
+        return vodList;
+    }
+
+    public Vod getVod(String vodId) {
+        if (vods.containsKey(vodId)) return vods.get(vodId);
+        List<Vod> vodList = getVods(List.of(vodId));
+        if (vodList.size() == 0) return null;
+        return getVods(List.of(vodId)).get(0);
     }
 
     public static Config.ArchiveSet getArchiveSet(String channelId) {

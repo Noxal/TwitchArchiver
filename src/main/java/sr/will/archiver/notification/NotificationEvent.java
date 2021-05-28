@@ -5,9 +5,11 @@ import java.awt.*;
 public enum NotificationEvent {
     STREAM_START(Color.BLUE, "{user} started streaming!"),
     STREAM_END(Color.BLUE, "{user} stopped streaming!"),
+    STREAM_ASSOCIATE_FAIL(Color.RED, "Failed to find vod for {user}'s stream"),
     DOWNLOAD_START(Color.GREEN, "Started downloading {user}'s vod \"{title}\" from {date}!"),
     DOWNLOAD_FINISH(Color.GREEN, "Finished downloading {user}'s vod \"{title}\" from {date}!"),
     DOWNLOAD_FAIL(Color.RED, "Failed to download {user}'s vod \"{title}\" from {date}!"),
+    DOWNLOAD_DELETED(Color.RED, "Failed to download {user}'s vod \"{title}\" from {date}! VOD was deleted."),
     TRANSCODE_START(Color.GREEN, "Started transcoding {user}'s vod \"{title}\" from {date}!"),
     TRANSCODE_FINISH(Color.GREEN, "Finished transcoding {user}'s vod \"{title}\" from {date}!"),
     TRANSCODE_FAIL(Color.RED, "Failed to transcode {user}'s vod \"{title}\" from {date}!"),

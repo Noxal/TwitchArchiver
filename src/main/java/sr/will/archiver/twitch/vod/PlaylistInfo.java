@@ -5,6 +5,7 @@ import sr.will.archiver.notification.NotificationEvent;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
@@ -14,7 +15,7 @@ public class PlaylistInfo {
     public VodDownloader downloader;
     public String baseURL;
     public double duration;
-    public List<String> parts;
+    public List<String> parts = new ArrayList<>();
 
     public static final Pattern durationPattern = Pattern.compile("#EXT-X-TWITCH-TOTAL-SECS:([0-9.]+)");
 

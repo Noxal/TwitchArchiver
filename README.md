@@ -13,10 +13,6 @@ for configuration options that are not readily obvious.
     "clientId": "TWITCH_CLIENT_ID",
     "clientSecret": "TWITCH_CLIENT_SECRET"
   },
-  "google": {
-    "clientId": "GOOGLE_CLIENT_ID",
-    "clientSecret": "GOOGLE_CLIENT_SECRET"
-  },
   "database": {
     "host": "DB_HOST", // MariaDB
     "database": "DB_NAME",
@@ -25,33 +21,75 @@ for configuration options that are not readily obvious.
   },
   "archiveSets": [
     {
-      "twitchUser": "Willsr71", // Username of a twitch user
-      "upload": true // Whether to upload the users's vods to youtube
-    },
-    {
-      "twitchUser": "Apron__",
-      "upload": false
+      "twitchUser": "kiva",
+      "numVideos": 6,
+      "upload": false,
+      "youTube": {
+        "google": {
+          "clientId": "GOOGLE_CLIENT_ID",
+          "clientSecret": "GOOGLE_CLIENT_SECRET"
+        },
+        "title": "{date}: {title} Part {part}/{parts}",
+        "description": "Twitch vod streamed by {user} on {date}, {time}.\nVOD description: {description}",
+        "category": "20",
+        "tags": [
+          "Gaming",
+          "Twitch"
+        ],
+        "madeForKids": false,
+        "embeddable": true,
+        "public": false
+      },
+      "deletion": {
+        "mode": "BOTH_MAX",
+        "maxNum": 2,
+        "maxAge": 7
+      }
     }
   ],
   "download": {
-    "numVideos": 2, // How many recent videos we should download. Values over 100 have no effect
-    "threads": 5, // How many threads to download with. If you are not saturating your connection enough just increase this
-    "directory": "downloads" // Where to download the video files to
+    "threads": 5,
+    "chatThreads": 10,
+    "directory": "downloads"
   },
   "transcode": {
-    "maxVideoLength": 120, // Max video length in minutes, videos will be split into segments of the max length if they exceed it
-    "threads": 4, // How many simultaneous transcodes to run. Recommended to only use 1 thread on a HDD, SSDs can typically handle 4+
-    "directory": "transcodes", // Where to put the transcoded files
-    "ffmpegLocation": "/path/to/ffmpeg", // Path to the ffmpeg executable
-    "ffprobeLocation": "/path/to/ffprobe" // Path to the ffprobe executable (comes with ffmpeg)
+    "maxVideoLength": 120,
+    "threads": 5,
+    "directory": "transcodes",
+    "ffmpegLocation": "/usr/bin/ffmpeg",
+    "ffprobeLocation": "/usr/bin/ffprobe"
   },
   "upload": {
-    "threads": 1 // How many videos to upload at once
+    "threads": 1,
+    "dateFormat": "yyyy-MM-dd",
+    "timeFormat": "hh:mm"
   },
+  "notifications": [
+    {
+      "webhook": "DISCORD_WEBHOOK_URL",
+      "type": "DISCORD",
+      "events": [
+        "STREAM_START",
+        "STREAM_END",
+        "DOWNLOAD_START",
+        "DOWNLOAD_FINISH",
+        "DOWNLOAD_FAIL",
+        "TRANSCODE_START",
+        "TRANSCODE_FINISH",
+        "TRANSCODE_FAIL",
+        "UPLOAD_START",
+        "UPLOAD_FINISH",
+        "UPLOAD_FAIL",
+        "DELETE_START",
+        "DELETE_FINISH",
+        "DELETE_FAIL"
+      ]
+    }
+  ],
   "times": {
-    "goLiveDelay": 5, // How many minutes to wait after someone goes live to check for a vod
-    "goOfflineDelay": 6, // How many minutes to wait after someone stops streaming to stop checking the vod
-    "liveCheckInterval": 6 // How often in minutes we chould check the vod for updates. Twitch updates vods about every 5-6 minutes so lower numbers will not have much, if any, effect
+    "goLiveDelay": 6,
+    "goOfflineDelay": 6,
+    "liveCheckInterval": 6
   }
 }
 ```

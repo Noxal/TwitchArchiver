@@ -2,13 +2,14 @@ package sr.will.archiver.twitch.vod;
 
 import com.github.twitch4j.helix.domain.Stream;
 import com.github.twitch4j.helix.domain.Video;
-import com.google.gson.JsonObject;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.apache.commons.io.FileUtils;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.entity.Vod;
 import sr.will.archiver.notification.NotificationEvent;
 import sr.will.archiver.twitch.ChannelDownloader;
+import sr.will.archiver.twitch.VodDeletedException;
 import sr.will.archiver.twitch.chat.ChatDownloader;
 import sr.will.archiver.twitch.model.PlaybackAccessToken;
 import sr.will.archiver.twitch.model.PlaybackAccessTokenRequestTemplate;
@@ -21,12 +22,10 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class VodDownloader {
     public ChannelDownloader channelDownloader;
@@ -54,89 +53,80 @@ public class VodDownloader {
     public void run() {
         Archiver.LOGGER.info("Starting download for vod {} on channel {} {}", vod.id, vod.channelId, stream == null ? "" : "Currently streaming");
 
-        PlaybackAccessToken vodToken = getVodToken();
-        playlistInfo = getM3u8(vodToken);
-        downloadParts();
-        chatDownloader.run();
+        try {
+            PlaybackAccessToken vodToken = getVodToken();
+            playlistInfo = getM3u8(vodToken);
+            downloadParts();
+            chatDownloader.run();
+        } catch (VodDeletedException e) {
+            Archiver.LOGGER.error("Failed to download vod {} on channel {}: vod was deleted", vod.id, vod.channelId);
+            Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_DELETED, vod);
+            // If there are no sections, the chat downloader never started (or it errored, which doesn't matter if the download failed)
+            if (chatDownloader.sections.size() == 0) chatDownloader.done = true;
+            checkCompleted();
+        } catch (Exception e) {
+            Archiver.LOGGER.error("Failed to download vod {} on channel {}", vod.id, vod.channelId);
+            Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FAIL, vod);
+            e.printStackTrace();
+        }
     }
 
     public void downloadParts() {
-        try {
-            List<String> files = Files.lines(new File(vod.getDownloadDir(), "index-original.m3u8").toPath())
-                    .filter(line -> !line.isEmpty() && !line.startsWith("#"))
-                    .collect(Collectors.toList());
-
-            // If this is a current livestream and this isn't the first time checking
-            if (stream != null && parts.size() != 0) {
-                Archiver.LOGGER.info("Queuing {} files for vod {} on channel {}", files.size() - parts.size(), vod.id, vod.channelId);
-                if (files.size() == parts.size()) {
-                    checkCompleted();
-                    return;
-                }
-            } else {
-                Archiver.LOGGER.info("Queuing {} files for vod {} on channel {}", files.size(), vod.id, vod.channelId);
-                Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_START, vod, stream);
+        // If this is a current livestream and this isn't the first time checking
+        if (stream != null && parts.size() != 0) {
+            Archiver.LOGGER.info("Queuing {} files for vod {} on channel {}", playlistInfo.parts.size() - parts.size(), vod.id, vod.channelId);
+            if (playlistInfo.parts.size() == parts.size()) {
+                checkCompleted();
+                return;
             }
-
-            for (int x = parts.size(); x < files.size(); x++) {
-                parts.add(new PartDownloader(this, playlistInfo.baseURL, files.get(x)));
-            }
-
-            checkCompleted();
-        } catch (IOException e) {
-            Archiver.LOGGER.error("Failed to download parts for vod {} on channel {}", vod.id, vod.channelId);
-            Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FAIL, vod);
-            e.printStackTrace();
+        } else {
+            Archiver.LOGGER.info("Queuing {} files for vod {} on channel {}", playlistInfo.parts.size(), vod.id, vod.channelId);
+            Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_START, vod, stream);
         }
+
+        for (int x = parts.size(); x < playlistInfo.parts.size(); x++) {
+            parts.add(new PartDownloader(this, playlistInfo.baseURL, playlistInfo.parts.get(x)));
+        }
+
+        checkCompleted();
     }
 
-    public PlaylistInfo getM3u8(PlaybackAccessToken token) {
-        try {
-            URL url = new URL("https://usher.ttvnw.net/vod/" + video.getId() + ".m3u8?" +
-                    "allow_source=true&player=twitchweb&playlist_include_framerate=true&allow_spectre=true" +
-                    "&token=" + URLEncoder.encode(token.token, "UTF-8") +
-                    "&sig=" + token.signature
-            );
-            Scanner qualityPlaylistScanner = new Scanner(url.openStream());
-            while (qualityPlaylistScanner.hasNext()) {
-                String line = qualityPlaylistScanner.nextLine();
-                if (line.startsWith("#")) continue;
-                File file = new File(vod.getDownloadDir(), "index-original.m3u8");
-                FileUtils.copyURLToFile(new URL(line), file);
-                return new PlaylistInfo(this, file, line.substring(0, line.lastIndexOf('/') + 1));
-            }
-        } catch (IOException e) {
-            Archiver.LOGGER.error("Failed to get M3u8 playlist for vod {} on channel {}", vod.id, vod.channelId);
-            Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FAIL, vod);
-            e.printStackTrace();
+    public PlaylistInfo getM3u8(PlaybackAccessToken token) throws IOException {
+        URL url = new URL("https://usher.ttvnw.net/vod/" + vod.id + ".m3u8?" +
+                                  "allow_source=true&player=twitchweb&playlist_include_framerate=true&allow_spectre=true" +
+                                  "&token=" + URLEncoder.encode(token.token, "UTF-8") +
+                                  "&sig=" + token.signature
+        );
+        Scanner qualityPlaylistScanner = new Scanner(url.openStream());
+        while (qualityPlaylistScanner.hasNext()) {
+            String line = qualityPlaylistScanner.nextLine();
+            if (line.startsWith("#")) continue;
+            File file = new File(vod.getDownloadDir(), "index-original.m3u8");
+            FileUtils.copyURLToFile(new URL(line), file);
+            return new PlaylistInfo(this, file, line.substring(0, line.lastIndexOf('/') + 1));
         }
         return null;
     }
 
-    public PlaybackAccessToken getVodToken() {
-        try {
-            URL url = new URL("https://gql.twitch.tv/gql");
-            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Accept", "*/*");
-            connection.setRequestProperty("Client-ID", Archiver.TWITCH_CLIENT_ID); // Twitch's client id
-            connection.setRequestProperty("Content-Type", "text/plain;charset=UTF-8");
-            connection.setDoOutput(true);
-            OutputStream outputStream = connection.getOutputStream();
-            outputStream.write(Archiver.GSON.toJson(new PlaybackAccessTokenRequestTemplate(vod.id)).getBytes(StandardCharsets.UTF_8));
-            outputStream.close();
-            connection.connect();
+    public PlaybackAccessToken getVodToken() throws IOException {
+        URL url = new URL("https://gql.twitch.tv/gql");
+        HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Accept", "*/*");
+        connection.setRequestProperty("Client-ID", Archiver.TWITCH_CLIENT_ID); // Twitch's client id
+        connection.setRequestProperty("Content-Type", "text/plain;charset=UTF-8");
+        connection.setDoOutput(true);
+        OutputStream outputStream = connection.getOutputStream();
+        outputStream.write(Archiver.GSON.toJson(new PlaybackAccessTokenRequestTemplate(vod.id)).getBytes(StandardCharsets.UTF_8));
+        outputStream.close();
+        connection.connect();
 
-            JsonObject data = JsonParser.parseReader(new InputStreamReader(connection.getInputStream())).getAsJsonObject()
-                    .get("data").getAsJsonObject()
-                    .get("videoPlaybackAccessToken").getAsJsonObject();
-            return new PlaybackAccessToken(data.get("value").getAsString(), data.get("signature").getAsString());
-        } catch (IOException e) {
-            Archiver.LOGGER.error("Unable to get Vod token for vod {} on channel {}", vod.id, vod.channelId);
-            Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_FAIL, vod);
-            e.printStackTrace();
-        }
-        return null;
+        JsonElement tokenJson = JsonParser.parseReader(new InputStreamReader(connection.getInputStream())).getAsJsonObject()
+                                        .get("data").getAsJsonObject()
+                                        .get("videoPlaybackAccessToken");
+
+        if (tokenJson.isJsonNull()) throw new VodDeletedException();
+        return new PlaybackAccessToken(tokenJson.getAsJsonObject().get("value").getAsString(), tokenJson.getAsJsonObject().get("signature").getAsString());
     }
 
     public void checkCompleted() {

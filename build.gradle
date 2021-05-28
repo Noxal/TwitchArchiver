@@ -1,48 +1,43 @@
 buildscript {
     repositories {
-        jcenter()
+        mavenCentral()
     }
 }
 
 plugins {
     id "java"
     id "idea"
-    id "com.github.johnrengelman.shadow" version "5.1.0"
+    id "com.github.johnrengelman.shadow" version "5.2.0"
 }
 
 def buildNumber = System.env.BUILD_NUMBER ?: "SNAPSHOT"
 
-def projectId = "twitcharchiver"
 project.group = "sr.will"
 project.version = "1.0-" + buildNumber
 project.description = "A program to download twitch VODs and optionally upload them to youtube"
 
-def jarName = "${projectId}-${project.version.toString()}.jar"
-
 repositories {
     mavenCentral()
-    jcenter()
 
     maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
 }
 
 dependencies {
-    compile "org.slf4j:slf4j-simple:1.7.30"
-    compile "com.google.code.gson:gson:2.8.6"
-    compile "org.json:json:20210307"
-    compile "commons-io:commons-io:2.7"
-    compile "org.mariadb.jdbc:mariadb-java-client:2.4.0"
+    implementation "org.slf4j:slf4j-api:1.7.30"
+    implementation "org.slf4j:slf4j-log4j12:1.7.30"
+    implementation "log4j:log4j:1.2.17"
 
-    compile "com.github.twitch4j:twitch4j:1.3.1"
-    compile "net.bramp.ffmpeg:ffmpeg:0.6.2"
-    compile "com.google.oauth-client:google-oauth-client-jetty:1.23.0"
-    compile "com.google.apis:google-api-services-youtube:v3-rev20210410-1.31.0"
+    implementation "com.google.code.gson:gson:2.8.6"
+    implementation "org.json:json:20210307"
+    implementation "commons-io:commons-io:2.7"
+    implementation "org.mariadb.jdbc:mariadb-java-client:2.4.0"
 
-    compile "club.minnced:discord-webhooks:0.5.7"
-}
+    implementation "com.github.twitch4j:twitch4j:1.3.1"
+    implementation "net.bramp.ffmpeg:ffmpeg:0.6.2"
+    implementation "com.google.oauth-client:google-oauth-client-jetty:1.23.0"
+    implementation "com.google.apis:google-api-services-youtube:v3-rev20210410-1.31.0"
 
-jar {
-    archiveName jarName
+    implementation "club.minnced:discord-webhooks:0.5.7"
 }
 
 shadowJar {
@@ -50,7 +45,7 @@ shadowJar {
         attributes "Main-Class": "sr.will.archiver.Main"
     }
 
-    archiveName jarName
+    archiveClassifier.set("")
 }
 
 build {

@@ -3,7 +3,6 @@ package sr.will.archiver.config;
 import com.google.gson.annotations.SerializedName;
 import sr.will.archiver.notification.NotificationEvent;
 
-import java.io.File;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
@@ -40,7 +39,8 @@ public class Config {
         public int numVideos = 2;
         public boolean upload = false;
         public YouTube youTube = new YouTube();
-        public Deletion deletion = new Deletion();
+        public DeletionPolicy downloadDeletionPolicy = new DeletionPolicy();
+        public DeletionPolicy transcodeDeletionPolicy = new DeletionPolicy();
 
         public static class YouTube {
             public Google google = new Google();
@@ -64,7 +64,7 @@ public class Config {
             }
         }
 
-        public static class Deletion {
+        public static class DeletionPolicy {
             public Mode mode = Mode.BOTH_MAX;
             public int maxNum = 2;
             public int maxAge = 7;
@@ -83,7 +83,8 @@ public class Config {
 
         public void validate() {
             if (youTube == null) youTube = new YouTube();
-            if (deletion == null) deletion = new Deletion();
+            if (downloadDeletionPolicy == null) downloadDeletionPolicy = new DeletionPolicy();
+            if (transcodeDeletionPolicy == null) transcodeDeletionPolicy = new DeletionPolicy();
 
             youTube.validate();
         }
@@ -109,8 +110,6 @@ public class Config {
 
         public void validate() {
             if (threads <= 0) throw new RuntimeException("Cannot have less than 1 transcode thread");
-            if (new File(ffmpegLocation).exists()) throw new RuntimeException("ffmpeg not found");
-            if (new File(ffprobeLocation).exists()) throw new RuntimeException("ffprobe not found");
         }
     }
 

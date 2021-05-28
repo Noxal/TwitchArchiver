@@ -7,12 +7,14 @@ import com.github.twitch4j.helix.domain.VideoList;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.config.Config;
 import sr.will.archiver.entity.Vod;
+import sr.will.archiver.notification.NotificationEvent;
 import sr.will.archiver.twitch.vod.VodDownloader;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class ChannelDownloader {
@@ -68,11 +70,27 @@ public class ChannelDownloader {
         }
     }
 
-    public void addVideoFromStream(Stream stream) {
+    public void addVideoFromStream(Stream stream, int retries) {
         this.stream = stream;
         // There's no easy api call to get a video from a stream id
         // so we just use the call from the original downloader to make things simpler
         run();
+
+        // Check if the vod was added
+        if (vodDownloaders.stream().anyMatch(downloader -> downloader.stream.getId().equals(stream.getId()))) return;
+
+        // Vod was not added
+        if (retries > 3) {
+            Archiver.LOGGER.error("Failed to find vod for {}'s livestream {}", stream.getUserLogin(), stream.getId());
+            Archiver.instance.webhookManager.execute(NotificationEvent.STREAM_ASSOCIATE_FAIL, NotificationEvent.STREAM_ASSOCIATE_FAIL.message.replace("{user}", stream.getUserLogin()));
+            return;
+        }
+
+        Archiver.scheduledExecutor.schedule(() -> addVideoFromStream(stream, retries + 1), 1, TimeUnit.MINUTES);
+    }
+
+    public void addVideoFromStream(Stream stream) {
+        addVideoFromStream(stream, 0);
     }
 
     public void streamEnded() {
@@ -107,6 +125,9 @@ public class ChannelDownloader {
         for (Vod vod : vods) {
             if (vod.id.equals(vodId)) return vod;
         }
+        Vod vod = Archiver.instance.getVod(vodId);
+        if (vod != null) return vod;
+
         return new Vod(vodId, user.getId(), createdAt, title, description, false, false, false, 0).create();
     }
 }
