@@ -24,6 +24,7 @@ for configuration options that are not readily obvious.
       "twitchUser": "kiva",
       "numVideos": 6,
       "upload": false,
+      "downloadChat": true,
       "youTube": {
         "google": {
           "clientId": "GOOGLE_CLIENT_ID",

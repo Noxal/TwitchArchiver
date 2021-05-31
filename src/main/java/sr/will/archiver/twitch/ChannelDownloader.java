@@ -1,7 +1,6 @@
 package sr.will.archiver.twitch;
 
 import com.github.twitch4j.helix.domain.Stream;
-import com.github.twitch4j.helix.domain.User;
 import com.github.twitch4j.helix.domain.Video;
 import com.github.twitch4j.helix.domain.VideoList;
 import sr.will.archiver.Archiver;
@@ -18,19 +17,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class ChannelDownloader {
-    public User user;
-    public Stream stream;
+    public String userId;
+    public List<Stream> unhandledStreams = new ArrayList<>();
     public Config.ArchiveSet archiveSet;
     public final List<VodDownloader> vodDownloaders = new ArrayList<>();
     public List<Vod> vods;
 
-    public ChannelDownloader(User user, Stream stream) {
-        this.user = user;
-        this.stream = stream;
+    public ChannelDownloader(String userId, Stream stream) {
+        this.userId = userId;
+        if (stream != null) unhandledStreams.add(stream);
 
-        archiveSet = Archiver.getArchiveSet(user.getId());
+        archiveSet = Archiver.getArchiveSet(userId);
         if (archiveSet == null) {
-            Archiver.LOGGER.error("No archive set found for user {}, cancelling downloads", user.getLogin());
+            Archiver.LOGGER.error("No archive set found for user {}, cancelling downloads", userId);
             return;
         }
 
@@ -38,27 +37,23 @@ public class ChannelDownloader {
     }
 
     public void run() {
-        vods = Archiver.getVods(Archiver.database.query("SELECT * FROM vods WHERE channel_id = ? ORDER BY id DESC LIMIT ?;", user.getId(), archiveSet.numVideos));
+        vods = Archiver.getVods(Archiver.database.query("SELECT * FROM vods WHERE channel_id = ? ORDER BY id DESC LIMIT ?;", userId, archiveSet.numVideos));
 
-        VideoList videos = Archiver.twitchClient.getHelix().getVideos(null, null, user.getId(), null, null, null, null, "archive", null, null, archiveSet.numVideos).execute();
+        VideoList videos = Archiver.twitchClient.getHelix().getVideos(null, null, userId, null, null, null, null, "archive", null, null, archiveSet.numVideos).execute();
 
-        Archiver.LOGGER.info("Got {} videos from channel {}", videos.getVideos().size(), user.getId());
+        Archiver.LOGGER.info("Got {} videos from channel {}", videos.getVideos().size(), userId);
         for (Video video : videos.getVideos()) {
-            if (vodDownloaders.stream().anyMatch(downloader -> downloader.video.getId().equals(video.getId()))) {
+            if (vodDownloaders.stream().anyMatch(downloader -> downloader.vod.id.equals(video.getId()))) {
                 // Video downloader already exists, don't create it again
-                Archiver.LOGGER.info("Downloader already exists, skipping");
                 continue;
             }
 
             Vod vod = getVod(video.getId(), video.getCreatedAtInstant(), video.getTitle(), video.getDescription());
             vods.remove(vod);
-            if (stream != null && video.getStreamId().equals(stream.getId())) {
-                // vod has a current stream associated
-                vodDownloaders.add(new VodDownloader(this, video, vod, stream));
-            } else {
-                // no current stream
-                vodDownloaders.add(new VodDownloader(this, video, vod, null));
-            }
+
+            Stream stream = unhandledStreams.stream().filter(s -> video.getStreamId().equals(s.getId())).findFirst().orElse(null);
+            vodDownloaders.add(new VodDownloader(this, vod, stream));
+            if (stream != null) unhandledStreams.remove(stream);
         }
 
         // Handle vods that have been deleted from twitch but are still in the db
@@ -66,18 +61,18 @@ public class ChannelDownloader {
             Archiver.LOGGER.info("Got an additional {} videos that have been deleted from twitch", vods.size());
         for (Vod vod : vods) {
             Archiver.LOGGER.info("deleted vod: {} ({})", vod.title, vod.id);
-            vodDownloaders.add(new VodDownloader(this, null, vod, null));
+            vodDownloaders.add(new VodDownloader(this, vod, null));
         }
     }
 
     public void addVideoFromStream(Stream stream, int retries) {
-        this.stream = stream;
+        if (!unhandledStreams.contains(stream)) unhandledStreams.add(stream);
         // There's no easy api call to get a video from a stream id
         // so we just use the call from the original downloader to make things simpler
         run();
 
         // Check if the vod was added
-        if (vodDownloaders.stream().anyMatch(downloader -> downloader.stream.getId().equals(stream.getId()))) return;
+        if (!unhandledStreams.contains(stream)) return;
 
         // Vod was not added
         if (retries > 3) {
@@ -86,7 +81,8 @@ public class ChannelDownloader {
             return;
         }
 
-        Archiver.scheduledExecutor.schedule(() -> addVideoFromStream(stream, retries + 1), 1, TimeUnit.MINUTES);
+        Archiver.LOGGER.warn("Failed to find vod for {}'s livestream {}", stream.getUserLogin(), stream.getId());
+        Archiver.scheduledExecutor.schedule(() -> addVideoFromStream(stream, retries + 1), Archiver.config.times.liveCheckInterval, TimeUnit.MINUTES);
     }
 
     public void addVideoFromStream(Stream stream) {
@@ -100,25 +96,16 @@ public class ChannelDownloader {
         // Fastest time is just the goOfflineDelay, slowest time is goOfflineDelay + liveCheckInterval
 
         List<VodDownloader> liveVods = vodDownloaders.stream()
-                .filter(downloader -> downloader.stream != null)
-                .sorted(Comparator.comparing(downloader -> downloader.vod.createdAt))
-                .collect(Collectors.toList());
-
-        // TODO remove this bit after testing
-        Archiver.LOGGER.info("Got {} vods marked as live", liveVods.size());
-        for (VodDownloader downloader : liveVods) {
-            Archiver.LOGGER.info("vod {} start time: {}", downloader.vod.id, downloader.vod.createdAt);
-        }
-
-        stream = null;
+                                               .filter(downloader -> downloader.stream != null)
+                                               .sorted(Comparator.comparing(downloader -> downloader.vod.createdAt))
+                                               .collect(Collectors.toList());
 
         if (liveVods.size() == 0) {
             Archiver.LOGGER.error("Attempted to mark stream as complete, but no vods are marked as streaming");
             return;
         }
 
-        Archiver.LOGGER.info("Marking last vod as complete");
-        liveVods.get(liveVods.size() - 1).stream = null;
+        liveVods.get(0).stream = null;
     }
 
     public Vod getVod(String vodId, Instant createdAt, String title, String description) {
@@ -128,6 +115,6 @@ public class ChannelDownloader {
         Vod vod = Archiver.instance.getVod(vodId);
         if (vod != null) return vod;
 
-        return new Vod(vodId, user.getId(), createdAt, title, description, false, false, false, 0).create();
+        return new Vod(vodId, userId, createdAt, title, description, false, false, false, 0).create();
     }
 }

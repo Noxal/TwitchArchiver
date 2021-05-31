@@ -45,8 +45,8 @@ public class ChatSectionDownloader {
             Comments comments = Archiver.GSON.fromJson(new InputStreamReader(connection.getInputStream()), Comments.class);
 
             if ((direction == Direction.FORWARD && comments._next == null) || // going forward and no next
-                    (direction == Direction.BACKWARD && comments._prev == null) || // going backward and no prev
-                    (direction == Direction.BOTH && (comments._next == null || comments._prev == null))) { // going both and either is missing
+                        (direction == Direction.BACKWARD && comments._prev == null) || // going backward and no prev
+                        (direction == Direction.BOTH && (comments._next == null || comments._prev == null))) { // going both and either is missing
                 // We've reached an end of the video
                 Archiver.LOGGER.info("Reached the end for direction {}", direction);
                 insertMessages(comments);
@@ -55,8 +55,8 @@ public class ChatSectionDownloader {
 
             // Collect all the comment UUIDs
             List<UUID> commentIds = comments.comments.stream()
-                    .map(comment -> UUID.fromString(comment._id))
-                    .collect(Collectors.toList());
+                                            .map(comment -> UUID.fromString(comment._id))
+                                            .collect(Collectors.toList());
 
             // Add all the comment UUIDs to the master list. If any exist then we've overlapped with another section downloader
             // and should not download the next segment
@@ -104,6 +104,12 @@ public class ChatSectionDownloader {
     }
 
     private void insertMessages(Comments comments) {
+        if (comments.comments.size() == 0) {
+            done = true;
+            chatDownloader.checkCompleted();
+            return;
+        }
+
         // Insert messages into the db
         // This is not a very pretty or performant way of doing things and should probably be looked at in the future
         StringBuilder queryBuilder = new StringBuilder("REPLACE INTO chat (id, channel, vod, offset, author, message) VALUES ");

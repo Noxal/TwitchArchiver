@@ -37,6 +37,7 @@ public class Config {
     public static class ArchiveSet {
         public String twitchUser;
         public int numVideos = 2;
+        public boolean downloadChat = true;
         public boolean upload = false;
         public YouTube youTube = new YouTube();
         public DeletionPolicy downloadDeletionPolicy = new DeletionPolicy();

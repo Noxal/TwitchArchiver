@@ -29,16 +29,14 @@ import java.util.concurrent.TimeUnit;
 
 public class VodDownloader {
     public ChannelDownloader channelDownloader;
-    public Video video;
     public Vod vod;
     public PlaylistInfo playlistInfo;
     public Stream stream;
     public ChatDownloader chatDownloader;
     public final List<PartDownloader> parts = new ArrayList<>();
 
-    public VodDownloader(ChannelDownloader channelDownloader, Video video, Vod vod, Stream stream) {
+    public VodDownloader(ChannelDownloader channelDownloader, Vod vod, Stream stream) {
         this.channelDownloader = channelDownloader;
-        this.video = video;
         this.vod = vod;
         this.stream = stream;
 
@@ -57,7 +55,7 @@ public class VodDownloader {
             PlaybackAccessToken vodToken = getVodToken();
             playlistInfo = getM3u8(vodToken);
             downloadParts();
-            chatDownloader.run();
+            if (channelDownloader.archiveSet.downloadChat) chatDownloader.run();
         } catch (VodDeletedException e) {
             Archiver.LOGGER.error("Failed to download vod {} on channel {}: vod was deleted", vod.id, vod.channelId);
             Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_DELETED, vod);
@@ -88,7 +86,7 @@ public class VodDownloader {
             parts.add(new PartDownloader(this, playlistInfo.baseURL, playlistInfo.parts.get(x)));
         }
 
-        checkCompleted();
+        if (!channelDownloader.archiveSet.downloadChat) checkCompleted();
     }
 
     public PlaylistInfo getM3u8(PlaybackAccessToken token) throws IOException {
@@ -133,7 +131,7 @@ public class VodDownloader {
         int partsCompleted = getPartsCompleted();
         //Archiver.LOGGER.info("Video {} is {}% complete ({}/{})", video.getId(), (int) Math.round(((double) partsCompleted / (double) parts.size()) * 100), partsCompleted, parts.size());
         if (partsCompleted < parts.size()) return;
-        if (!chatDownloader.done) return;
+        if (!chatDownloader.done && channelDownloader.archiveSet.downloadChat) return;
 
         Archiver.LOGGER.info("Completed downloading vod {} on channel {}", vod.id, vod.channelId);
         if (stream != null) {

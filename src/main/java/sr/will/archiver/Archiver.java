@@ -131,7 +131,7 @@ public class Archiver {
             Stream stream = streams.getStreams().stream().filter(s -> s.getUserId().equals(user.getId())).findFirst().orElse(null);
 
             LOGGER.info("Queuing channel {} ({}) {}", user.getId(), user.getLogin(), stream == null ? "" : "Currently streaming");
-            channelDownloaders.add(new ChannelDownloader(user, stream));
+            channelDownloaders.add(new ChannelDownloader(user.getId(), stream));
         }
 
         Archiver.LOGGER.info("Queued {} channel downloads", channelDownloaders.size());
@@ -139,7 +139,7 @@ public class Archiver {
 
     public ChannelDownloader getChannelDownloader(String channelId) {
         for (ChannelDownloader downloader : channelDownloaders) {
-            if (downloader.user.getId().equals(channelId)) return downloader;
+            if (downloader.userId.equals(channelId)) return downloader;
         }
 
         return null;
@@ -207,7 +207,7 @@ public class Archiver {
     public static Config.ArchiveSet getArchiveSet(String channelId) {
         String username = instance.usernames.get(channelId);
         for (Config.ArchiveSet set : config.archiveSets) {
-            if (set.twitchUser.equals(username)) {
+            if (set.twitchUser.equalsIgnoreCase(username)) {
                 return set;
             }
         }
