@@ -1,5 +1,6 @@
 package sr.will.archiver.youtube;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.googleapis.media.MediaHttpUploader;
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.services.youtube.YouTube;
@@ -63,15 +64,21 @@ public class PartUploader {
             size = mediaContent.getLength();
 
             YouTube.Videos.Insert insert = uploader.manager.youTube.videos()
-                    .insert(Arrays.asList("snippet", "status"), video, mediaContent);
+                                                   .insert(Arrays.asList("snippet", "status"), video, mediaContent);
             MediaHttpUploader uploader = insert.getMediaHttpUploader();
             uploader.setDirectUploadEnabled(true);
 
             Video response = insert.execute();
+
+            Archiver.database.execute("REPLACE INTO youtube_parts (video_id, vod, part) VALUES (?, ?, ?)", response.getId(), vod.id, part);
         } catch (Exception e) {
             Archiver.LOGGER.error("Failed to upload vod {} part {} on channel {}", vod.id, part, vod.channelId);
             Archiver.instance.webhookManager.execute(NotificationEvent.UPLOAD_FAIL, vod);
-            e.printStackTrace();
+            if (e instanceof GoogleJsonResponseException) {
+                Archiver.LOGGER.info(((GoogleJsonResponseException) e).getDetails().getMessage());
+            } else {
+                e.printStackTrace();
+            }
             return;
         }
 
@@ -81,7 +88,7 @@ public class PartUploader {
 
     public String getReplacedString(String original) {
         return vod.getReplacedString(original)
-                .replace("{part}", part + "");
+                       .replace("{part}", (part + 1) + "");
     }
 
     public void markComplete() {
