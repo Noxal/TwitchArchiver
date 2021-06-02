@@ -70,7 +70,7 @@ public class PartUploader {
 
             Video response = insert.execute();
 
-            Archiver.database.execute("REPLACE INTO youtube_parts (video_id, vod, part) VALUES (?, ?, ?)", response.getId(), vod.id, part);
+            Archiver.database.execute("REPLACE INTO youtube_videos (video_id, vod, part_number) VALUES (?, ?, ?)", response.getId(), vod.id, part);
         } catch (Exception e) {
             Archiver.LOGGER.error("Failed to upload vod {} part {} on channel {}", vod.id, part, vod.channelId);
             Archiver.instance.webhookManager.execute(NotificationEvent.UPLOAD_FAIL, vod);
