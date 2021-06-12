@@ -95,10 +95,12 @@ public class VodDeleter {
     }
 
     public boolean outsideAgeLimit() {
+        if (deletionPolicy.maxAge == -1) return false;
         return Instant.now().isAfter(vod.createdAt.plus(deletionPolicy.maxAge, ChronoUnit.DAYS));
     }
 
     public boolean outsideNumLimit() {
+        if (deletionPolicy.maxNum == -1) return false;
         String[] vods = DeletionManager.getChildren(new File(type.getPath(), vod.channelId));
         if (vods == null) return false;
         return vods.length - ArrayUtils.indexOf(vods, vod.id) > deletionPolicy.maxNum;
