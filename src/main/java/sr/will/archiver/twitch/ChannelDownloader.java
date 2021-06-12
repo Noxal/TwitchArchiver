@@ -42,26 +42,26 @@ public class ChannelDownloader {
         VideoList videos = Archiver.twitchClient.getHelix().getVideos(null, null, userId, null, null, null, null, "archive", null, null, archiveSet.numVideos).execute();
 
         Archiver.LOGGER.info("Got {} videos from channel {}", videos.getVideos().size(), userId);
-        for (Video video : videos.getVideos()) {
-            if (vodDownloaders.stream().anyMatch(downloader -> downloader.vod.id.equals(video.getId()))) {
+        synchronized (vodDownloaders) {
+            for (Video video : videos.getVideos()) {
                 // Video downloader already exists, don't create it again
-                continue;
+                if (vodDownloaders.stream().anyMatch(downloader -> downloader.vod.id.equals(video.getId()))) continue;
+
+                Vod vod = getVod(video.getId(), video.getCreatedAtInstant(), video.getTitle(), video.getDescription());
+                vods.remove(vod);
+
+                Stream stream = unhandledStreams.stream().filter(s -> video.getStreamId().equals(s.getId())).findFirst().orElse(null);
+                vodDownloaders.add(new VodDownloader(this, vod, stream));
+                if (stream != null) unhandledStreams.remove(stream);
             }
 
-            Vod vod = getVod(video.getId(), video.getCreatedAtInstant(), video.getTitle(), video.getDescription());
-            vods.remove(vod);
-
-            Stream stream = unhandledStreams.stream().filter(s -> video.getStreamId().equals(s.getId())).findFirst().orElse(null);
-            vodDownloaders.add(new VodDownloader(this, vod, stream));
-            if (stream != null) unhandledStreams.remove(stream);
-        }
-
-        // Handle vods that have been deleted from twitch but are still in the db
-        if (vods.size() > 0)
-            Archiver.LOGGER.info("Got an additional {} videos that have been deleted from twitch", vods.size());
-        for (Vod vod : vods) {
-            Archiver.LOGGER.info("deleted vod: {} ({})", vod.title, vod.id);
-            vodDownloaders.add(new VodDownloader(this, vod, null));
+            // Handle vods that have been deleted from twitch but are still in the db
+            if (vods.size() > 0)
+                Archiver.LOGGER.info("Got an additional {} videos that have been deleted from twitch", vods.size());
+            for (Vod vod : vods) {
+                Archiver.LOGGER.info("deleted vod: {} ({})", vod.title, vod.id);
+                vodDownloaders.add(new VodDownloader(this, vod, null));
+            }
         }
     }
 

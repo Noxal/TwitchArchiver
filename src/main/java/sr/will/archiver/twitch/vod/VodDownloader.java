@@ -1,7 +1,6 @@
 package sr.will.archiver.twitch.vod;
 
 import com.github.twitch4j.helix.domain.Stream;
-import com.github.twitch4j.helix.domain.Video;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.apache.commons.io.FileUtils;
@@ -100,7 +99,11 @@ public class VodDownloader {
             String line = qualityPlaylistScanner.nextLine();
             if (line.startsWith("#")) continue;
             File file = new File(vod.getDownloadDir(), "index-original.m3u8");
-            FileUtils.copyURLToFile(new URL(line), file);
+            try {
+                FileUtils.copyURLToFile(new URL(line), file);
+            } catch (IOException e) {
+                if (e.getMessage().contains("Server returned HTTP response code: 403")) throw new VodDeletedException();
+            }
             return new PlaylistInfo(this, file, line.substring(0, line.lastIndexOf('/') + 1));
         }
         return null;

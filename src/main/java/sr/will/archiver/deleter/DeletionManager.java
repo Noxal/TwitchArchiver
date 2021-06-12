@@ -1,9 +1,10 @@
 package sr.will.archiver.deleter;
 
+import org.apache.commons.io.FileUtils;
 import sr.will.archiver.Archiver;
-import sr.will.archiver.entity.LocalVod;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,7 +12,9 @@ public class DeletionManager {
     public File downloadDir;
     public File transcodeDir;
 
-    public List<LocalVod> localVods = new ArrayList<>();
+    public final List<VodDeleter> vodDeleters = new ArrayList<>();
+
+    private final static long recheckDelay = 60 * 1000; // 1 minute
 
     public DeletionManager() {
         downloadDir = new File(Archiver.config.download.directory);
@@ -21,31 +24,54 @@ public class DeletionManager {
     }
 
     public void run() {
-        getDownloadedVods(LocalVod.Type.DOWNLOADED);
-        getDownloadedVods(LocalVod.Type.TRANSCODED);
+        try {
+            getDownloadedVods(VodType.DOWNLOADED);
+            getDownloadedVods(VodType.TRANSCODED);
 
-        for (LocalVod vod : localVods) {
-            if (vod.shouldDelete()) vod.delete();
+            vodDeleters.stream()
+                    .filter(deleter -> deleter.lastRun + recheckDelay < System.currentTimeMillis())
+                    .forEach(deleter -> Archiver.scheduledExecutor.submit(deleter::run));
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
-    public void getDownloadedVods(LocalVod.Type type) {
-        String[] children = getChildren(new File(type.getPath()));
-        if (children == null) return;
+    public void getDownloadedVods(VodType type) {
+        File parentFile = new File(type.getPath());
+        String[] children = getChildren(parentFile);
 
         for (String child : children) {
-            getDownloadedVods(type, child);
+            File childFile = new File(parentFile, child);
+            getDownloadedVods(type, child, childFile);
         }
     }
 
-    public void getDownloadedVods(LocalVod.Type type, String channelId) {
-        String[] children = getChildren(new File(type.getPath(), channelId));
-        if (children == null) return;
+    public void getDownloadedVods(VodType type, String channelId, File channelFile) {
+        String[] children = getChildren(channelFile);
+        if (children == null || children.length == 0) {
+            try {
+                Archiver.LOGGER.info("Channel {} has no vods, deleting", channelId);
+                FileUtils.deleteDirectory(channelFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
 
         for (String child : children) {
-            if (localVods.stream().anyMatch(vod -> vod.type == type && vod.channelId.equals(channelId) && vod.vodId.equals(child)))
+            File childFile = new File(channelFile, child);
+
+            if (!childFile.isDirectory()) {
+                FileUtils.deleteQuietly(childFile);
                 continue;
-            localVods.add(new LocalVod(type, channelId, child));
+            }
+
+            if (vodDeleters.stream().anyMatch(deleter -> deleter.type == type && deleter.channelId.equals(channelId) && deleter.vodId.equals(child)))
+                continue;
+
+            synchronized (vodDeleters) {
+                vodDeleters.add(new VodDeleter(this, childFile, type, channelId, child));
+            }
         }
     }
 

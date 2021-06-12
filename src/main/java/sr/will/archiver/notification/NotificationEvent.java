@@ -16,8 +16,7 @@ public enum NotificationEvent {
     UPLOAD_START(Color.GREEN, "Started uploading {user}'s vod \"{title}\" from {date}!"),
     UPLOAD_FINISH(Color.GREEN, "Finished uploading {user}'s vod \"{title}\" from {date}!"),
     UPLOAD_FAIL(Color.RED, "Failed to upload {user}'s vod \"{title}\" from {date}!"),
-    DELETE_START(Color.GREEN, "Started deleting {user}'s vod \"{title}\" from {date}!"),
-    DELETE_FINISH(Color.GREEN, "Finished deleting {user}'s vod \"{title}\" from {date}!"),
+    DELETE_SUCCESS(Color.GREEN, "Deleted {user}'s vod \"{title}\" from {date}!"),
     DELETE_FAIL(Color.RED, "Failed to delete {user}'s vod \"{title}\" from {date}!");
 
     public Color color;

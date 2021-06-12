@@ -70,15 +70,15 @@ public class VideoTranscoder {
                 long duration = Math.min((long) (format.duration * 1000) - startOffset, (long) Archiver.config.transcode.maxVideoLength * 60 * 1000);
 
                 FFmpegBuilder builder = new FFmpegBuilder()
-                        .setInput(probe)
-                        .addOutput(vod.getTranscodeDir() + vod.id + "-" + i + ".mp4")
-                        .setStartOffset(startOffset, TimeUnit.MILLISECONDS)
-                        .setDuration(duration, TimeUnit.MILLISECONDS)
-                        .setVideoCodec("copy")
-                        .setAudioCodec("copy")
-                        .addExtraArgs("-copyts", "-start_at_zero")
-                        //"-bsf:a aac_adtstoasc"
-                        .done();
+                                                .setInput(probe)
+                                                .addOutput(vod.getTranscodeDir() + vod.id + "-" + i + ".mp4")
+                                                .setStartOffset(startOffset, TimeUnit.MILLISECONDS)
+                                                .setDuration(duration, TimeUnit.MILLISECONDS)
+                                                .setVideoCodec("copy")
+                                                .setAudioCodec("copy")
+                                                .addExtraArgs("-copyts", "-start_at_zero")
+                                                //"-bsf:a aac_adtstoasc"
+                                                .done();
 
                 parts.add(new PartTranscoder(this, vod, TranscodeManager.executor.createJob(builder), i));
             }

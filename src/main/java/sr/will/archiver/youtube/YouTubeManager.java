@@ -46,5 +46,6 @@ public class YouTubeManager {
         }
 
         if (archiveSet.upload) clients.get(archiveSet.youTube.google.clientId).upload(vod);
+        else Archiver.instance.deletionManager.run();
     }
 }

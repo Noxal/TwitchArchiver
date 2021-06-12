@@ -40,6 +40,8 @@ public class VideoUploader {
         synchronized (manager.uploaders) {
             manager.uploaders.remove(this);
         }
+
+        Archiver.instance.deletionManager.run();
     }
 
     public int getPartsCompleted() {

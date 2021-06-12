@@ -80,8 +80,8 @@ public class Archiver {
         webhookManager = new WebhookManager();
         initializeTwitchClient();
         transcodeManager = new TranscodeManager();
-        youTubeManager = new YouTubeManager();
         deletionManager = new DeletionManager();
+        youTubeManager = new YouTubeManager();
 
         LOGGER.info("Done after {}ms!", System.currentTimeMillis() - startTime);
         LOGGER.info("The following line is to fool pterodactyl into thinking that the server has started successfully");
