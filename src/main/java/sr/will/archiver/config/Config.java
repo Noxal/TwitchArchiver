@@ -3,6 +3,7 @@ package sr.will.archiver.config;
 import com.google.gson.annotations.SerializedName;
 import sr.will.archiver.notification.NotificationEvent;
 
+import java.io.File;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
@@ -99,6 +100,7 @@ public class Config {
         public void validate() {
             if (threads <= 0) throw new RuntimeException("Cannot have less than 1 download thread");
             if (chatThreads <= 0) throw new RuntimeException("Cannot have less than 1 chat download thread");
+            if (!new File(directory).exists()) throw new RuntimeException("Download directory does not exist");
         }
     }
 
@@ -111,6 +113,7 @@ public class Config {
 
         public void validate() {
             if (threads <= 0) throw new RuntimeException("Cannot have less than 1 transcode thread");
+            if (!new File(directory).exists()) throw new RuntimeException("Transcode directory does not exist");
         }
     }
 

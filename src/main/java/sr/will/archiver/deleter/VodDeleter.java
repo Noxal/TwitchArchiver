@@ -30,8 +30,6 @@ public class VodDeleter {
         this.channelId = channelId;
         this.vodId = vodId;
         this.deletionPolicy = getDeletionPolicy();
-
-        lastRun = System.currentTimeMillis();
     }
 
     public void run() {

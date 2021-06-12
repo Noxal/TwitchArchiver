@@ -30,7 +30,10 @@ public class DeletionManager {
 
             vodDeleters.stream()
                     .filter(deleter -> deleter.lastRun + recheckDelay < System.currentTimeMillis())
-                    .forEach(deleter -> Archiver.scheduledExecutor.submit(deleter::run));
+                    .forEach(deleter -> {
+                        deleter.lastRun = System.currentTimeMillis();
+                        Archiver.scheduledExecutor.submit(deleter::run);
+                    });
         } catch (Exception e) {
             e.printStackTrace();
         }
