@@ -65,22 +65,15 @@ public class VideoTranscoder {
             FFmpegFormat format = probe.getFormat();
             Archiver.LOGGER.info("vod length: {}s ({} minutes), parts: {}", format.duration, (int) Math.ceil(format.duration / 60), (int) Math.ceil(format.duration / (Archiver.config.transcode.maxVideoLength * 60)));
 
-            for (int i = 0; i < Math.ceil(format.duration / (Archiver.config.transcode.maxVideoLength * 60)); i++) {
-                long startOffset = (long) Archiver.config.transcode.maxVideoLength * i * 60 * 1000;
-                long duration = Math.min((long) (format.duration * 1000) - startOffset, (long) Archiver.config.transcode.maxVideoLength * 60 * 1000);
+            if (Archiver.config.transcode.maxVideoLength == -1) {
+                createTranscoder(0, (long) format.duration * 1000, 0);
+            } else {
+                for (int i = 0; i < Math.ceil(format.duration / (Archiver.config.transcode.maxVideoLength * 60)); i++) {
+                    long startOffset = (long) Archiver.config.transcode.maxVideoLength * i * 60 * 1000;
+                    long duration = Math.min((long) (format.duration * 1000) - startOffset, (long) Archiver.config.transcode.maxVideoLength * 60 * 1000);
 
-                FFmpegBuilder builder = new FFmpegBuilder()
-                                                .setInput(probe)
-                                                .addOutput(vod.getTranscodeDir() + vod.id + "-" + i + ".mp4")
-                                                .setStartOffset(startOffset, TimeUnit.MILLISECONDS)
-                                                .setDuration(duration, TimeUnit.MILLISECONDS)
-                                                .setVideoCodec("copy")
-                                                .setAudioCodec("copy")
-                                                .addExtraArgs("-copyts", "-start_at_zero")
-                                                //"-bsf:a aac_adtstoasc"
-                                                .done();
-
-                parts.add(new PartTranscoder(this, vod, TranscodeManager.executor.createJob(builder), i));
+                    createTranscoder(startOffset, duration, i);
+                }
             }
 
             Archiver.LOGGER.info("Queued {} transcode parts for vod {} on channel {}", parts.size(), vod.id, vod.channelId);
@@ -96,6 +89,21 @@ public class VideoTranscoder {
                 e.printStackTrace();
             }
         }
+    }
+
+    private void createTranscoder(long startOffset, long duration, int part) {
+        FFmpegBuilder builder = new FFmpegBuilder()
+                                        .setInput(probe)
+                                        .addOutput(vod.getTranscodeDir() + vod.id + "-" + part + ".mp4")
+                                        .setStartOffset(startOffset, TimeUnit.MILLISECONDS)
+                                        .setDuration(duration, TimeUnit.MILLISECONDS)
+                                        .setVideoCodec("copy")
+                                        .setAudioCodec("copy")
+                                        .addExtraArgs("-copyts", "-start_at_zero")
+                                        //"-bsf:a aac_adtstoasc"
+                                        .done();
+
+        parts.add(new PartTranscoder(this, vod, TranscodeManager.executor.createJob(builder), part));
     }
 
     public void checkCompleted() {
