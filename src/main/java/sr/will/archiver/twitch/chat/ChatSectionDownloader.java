@@ -99,7 +99,7 @@ public class ChatSectionDownloader {
 
             retries++;
             Archiver.LOGGER.warn("Failed to download chat for video {} on channel {}, adding back to queue (attempt {})", chatDownloader.vodDownloader.vod.id, chatDownloader.vodDownloader.vod.channelId, retries + 1);
-            Archiver.downloadExecutor.submit(this::run);
+            Archiver.chatDownloadExecutor.submit(this::run);
         }
     }
 
