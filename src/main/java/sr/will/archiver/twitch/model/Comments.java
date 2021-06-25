@@ -60,7 +60,7 @@ public class Comments {
 
             public static class UserBadge {
                 public String _id;
-                public int version;
+                public String version;
             }
         }
     }
