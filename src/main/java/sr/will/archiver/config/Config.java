@@ -105,7 +105,7 @@ public class Config {
     }
 
     public static class Transcode {
-        public int maxVideoLength = 120;
+        public int maxVideoLength = 2880;
         public int threads = 1;
         public String directory = "transcodes";
         public String ffmpegLocation = "E:\\Downloads\\ffmpeg-4.4-essentials_build\\bin\\ffmpeg";

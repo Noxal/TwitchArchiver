@@ -112,7 +112,7 @@ public class ChatSectionDownloader {
 
         // Insert messages into the db
         // This is not a very pretty or performant way of doing things and should probably be looked at in the future
-        StringBuilder queryBuilder = new StringBuilder("REPLACE INTO chat (id, channel, vod, offset, author, message) VALUES ");
+        StringBuilder queryBuilder = new StringBuilder("REPLACE INTO chat (id, channel, vod, `offset`, author, message) VALUES ");
         List<Object> queryObjects = new ArrayList<>();
 
         for (Comments.Comment comment : comments.comments) {

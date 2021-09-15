@@ -64,7 +64,7 @@ public class Migrations {
                                           "id char(36) NOT NULL," + // message UUID
                                           "channel int NOT NULL," + // channel ID
                                           "vod int NOT NULL," + // VOD ID
-                                          "offset double NOT NULL," + // offset in seconds from the beginning of the vod
+                                          "`offset` double NOT NULL," + // offset in seconds from the beginning of the vod, offset is in quotes because it's a MySQL keyword
                                           "author varchar(25) NOT NULL," + // author display name
                                           "message longtext NOT NULL," + // json blob of the message
                                           "PRIMARY KEY (id)," +
