@@ -1,6 +1,7 @@
 package sr.will.archiver.twitch.chat;
 
 import sr.will.archiver.Archiver;
+import sr.will.archiver.entity.Comment;
 import sr.will.archiver.notification.NotificationEvent;
 import sr.will.archiver.twitch.model.Comments;
 
@@ -115,7 +116,7 @@ public class ChatSectionDownloader {
         StringBuilder queryBuilder = new StringBuilder("REPLACE INTO chat (id, channel, vod, `offset`, author, message) VALUES ");
         List<Object> queryObjects = new ArrayList<>();
 
-        for (Comments.Comment comment : comments.comments) {
+        for (Comment comment : comments.comments) {
             queryBuilder.append("(?, ?, ?, ?, ?, ?), ");
             queryObjects.addAll(Arrays.asList(
                     comment._id,

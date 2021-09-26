@@ -15,10 +15,10 @@ import org.slf4j.LoggerFactory;
 import sr.will.archiver.config.Config;
 import sr.will.archiver.deleter.DeletionManager;
 import sr.will.archiver.entity.Vod;
-import sr.will.archiver.transcode.TranscodeManager;
 import sr.will.archiver.notification.WebhookManager;
 import sr.will.archiver.sql.Database;
 import sr.will.archiver.sql.Migrations;
+import sr.will.archiver.transcode.TranscodeManager;
 import sr.will.archiver.twitch.ChannelDownloader;
 import sr.will.archiver.twitch.EventHandler;
 import sr.will.archiver.util.FileUtil;
@@ -111,10 +111,10 @@ public class Archiver {
 
     public void initializeTwitchClient() {
         twitchClient = TwitchClientBuilder.builder()
-                               .withClientId(config.twitch.clientId)
-                               .withClientSecret(config.twitch.clientSecret)
-                               .withEnableHelix(true)
-                               .build();
+                .withClientId(config.twitch.clientId)
+                .withClientSecret(config.twitch.clientSecret)
+                .withEnableHelix(true)
+                .build();
         twitchClient.getEventManager().getEventHandler(SimpleEventHandler.class).registerListener(new EventHandler());
 
         LOGGER.info("Getting user info...");
@@ -155,10 +155,10 @@ public class Archiver {
                         Instant.ofEpochMilli(resultSet.getLong("created_at")),
                         resultSet.getString("title"),
                         resultSet.getString("description"),
+                        resultSet.getString("youtube_id"),
                         resultSet.getBoolean("downloaded"),
                         resultSet.getBoolean("transcoded"),
-                        resultSet.getBoolean("uploaded"),
-                        resultSet.getInt("parts")
+                        resultSet.getBoolean("uploaded")
                 ));
             }
         } catch (SQLException e) {

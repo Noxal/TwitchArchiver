@@ -12,12 +12,12 @@ public class Vod {
     public final Instant createdAt;
     public final String title;
     public final String description;
+    public String youtubeId;
     public boolean downloaded;
     public boolean transcoded;
     public boolean uploaded;
-    public int parts;
 
-    public Vod(String id, String channelId, Instant createdAt, String title, String description, boolean downloaded, boolean transcoded, boolean uploaded, int parts) {
+    public Vod(String id, String channelId, Instant createdAt, String title, String description, String youtubeId, boolean downloaded, boolean transcoded, boolean uploaded) {
         this.id = id;
         this.channelId = channelId;
         this.createdAt = createdAt;
@@ -26,7 +26,6 @@ public class Vod {
         this.downloaded = downloaded;
         this.transcoded = transcoded;
         this.uploaded = uploaded;
-        this.parts = parts;
     }
 
     public String getDownloadDir() {
@@ -47,15 +46,15 @@ public class Vod {
         Archiver.database.execute("UPDATE vods SET downloaded = 1 WHERE id = ?;", id);
     }
 
-    public void setTranscoded(int parts) {
+    public void setTranscoded() {
         this.transcoded = true;
-        this.parts = parts;
-        Archiver.database.execute("UPDATE vods SET transcoded = 1, parts = ? WHERE id = ?;", parts, id);
+        Archiver.database.execute("UPDATE vods SET transcoded = 1 WHERE id = ?;", id);
     }
 
-    public void setUploaded() {
+    public void setUploaded(String youtubeId) {
         this.uploaded = true;
-        Archiver.database.execute("UPDATE vods SET uploaded = 1 WHERE id = ?;", id);
+        this.youtubeId = youtubeId;
+        Archiver.database.execute("UPDATE vods SET uploaded = 1, youtube_id = ? WHERE id = ?;", youtubeId, id);
     }
 
     public String getReplacedString(String original) {
@@ -63,7 +62,6 @@ public class Vod {
                 .replace("{title}", title)
                 .replace("{user}", Archiver.instance.usernames.get(channelId))
                 .replace("{description}", description)
-                .replace("{parts}", parts + "")
                 .replace("{date}", getTimeString(Archiver.config.upload.dateFormat))
                 .replace("{time}", getTimeString(Archiver.config.upload.timeFormat));
     }

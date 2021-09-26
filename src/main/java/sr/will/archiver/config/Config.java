@@ -52,7 +52,8 @@ public class Config implements Serializable {
             // https://github.com/lay295/TwitchDownloader/blob/master/TwitchDownloaderCLI/README.md#arguments-for-mode-chatrender
             public List<String> args = Arrays.asList(
                     "--background-color", "#00000000", // https://docs.microsoft.com/en-us/dotnet/api/skiasharp.skcolor.parse#remarks #AARRGGBB
-                    "--outline"
+                    "--outline",
+                    "--output-args=\"-c:v h264_nvenc -preset veryfast -crf 18 -pix_fmt yuv420p '{save_path}'\""
             );
 
             public int pos_x;

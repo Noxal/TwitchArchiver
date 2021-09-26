@@ -9,10 +9,8 @@ import sr.will.archiver.notification.NotificationEvent;
 import sr.will.archiver.transcode.chatrender.ChatRenderer;
 
 import java.io.*;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class VideoTranscoder {
@@ -20,7 +18,6 @@ public class VideoTranscoder {
     public final Vod vod;
     public FFmpegProbeResult probe;
     public ChatRenderer chatRenderer;
-    public final List<PartTranscoder> parts = new ArrayList<>();
 
     public VideoTranscoder(TranscodeManager manager, Vod vod) {
         this.manager = manager;
@@ -70,18 +67,25 @@ public class VideoTranscoder {
             FFmpegFormat format = probe.getFormat();
             Archiver.LOGGER.info("vod length: {}s ({} minutes), parts: {}", format.duration, (int) Math.ceil(format.duration / 60), (int) Math.ceil(format.duration / (Archiver.config.transcode.maxVideoLength * 60)));
 
-            if (Archiver.config.transcode.maxVideoLength == -1) {
-                createTranscoder(0, (long) format.duration * 1000, 0);
-            } else {
-                for (int i = 0; i < Math.ceil(format.duration / (Archiver.config.transcode.maxVideoLength * 60)); i++) {
-                    long startOffset = (long) Archiver.config.transcode.maxVideoLength * i * 60 * 1000;
-                    long duration = Math.min((long) (format.duration * 1000) - startOffset, (long) Archiver.config.transcode.maxVideoLength * 60 * 1000);
+            FFmpegBuilder builder = new FFmpegBuilder()
+                    .setInput(probe)
+                    .addOutput(vod.getTranscodeDir() + vod.id + ".mp4")
+                    .setVideoCodec("copy")
+                    .setAudioCodec("copy")
+                    .addExtraArgs("-copyts", "-start_at_zero")
+                    .done();
 
-                    createTranscoder(startOffset, duration, i);
-                }
+            TranscodeManager.executor.createJob(builder).run();
+            vod.setTranscoded();
+
+            Archiver.LOGGER.info("Completed transcode for vod {} on channel {}", vod.id, vod.channelId);
+            Archiver.instance.webhookManager.execute(NotificationEvent.TRANSCODE_FINISH, vod);
+
+            synchronized (manager.transcoders) {
+                manager.transcoders.remove(this);
             }
 
-            Archiver.LOGGER.info("Queued {} transcode parts for vod {} on channel {}", parts.size(), vod.id, vod.channelId);
+            Archiver.instance.youTubeManager.upload(vod);
         } catch (IOException e) {
             Archiver.LOGGER.error("Failed to transcode vod {} on channel {}", vod.id, vod.channelId);
             Archiver.instance.webhookManager.execute(NotificationEvent.TRANSCODE_FAIL, vod);
@@ -93,41 +97,6 @@ public class VideoTranscoder {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
-    }
-
-    private void createTranscoder(long startOffset, long duration, int part) {
-        FFmpegBuilder builder = new FFmpegBuilder()
-                .setInput(probe)
-                .addOutput(vod.getTranscodeDir() + vod.id + "-" + part + ".mp4")
-                .setStartOffset(startOffset, TimeUnit.MILLISECONDS)
-                .setDuration(duration, TimeUnit.MILLISECONDS)
-                .setVideoCodec("copy")
-                .setAudioCodec("copy")
-                .addExtraArgs("-copyts", "-start_at_zero")
-                //"-bsf:a aac_adtstoasc"
-                .done();
-
-        parts.add(new PartTranscoder(this, vod, TranscodeManager.executor.createJob(builder), part));
-    }
-
-    public void checkCompleted() {
-        if (getPartsCompleted() < parts.size()) return;
-
-        Archiver.LOGGER.info("Completed transcode for vod {} on channel {}, queuing for upload", vod.id, vod.channelId);
-        Archiver.instance.webhookManager.execute(NotificationEvent.TRANSCODE_FINISH, vod);
-        vod.setTranscoded(parts.size());
-
-        synchronized (manager.transcoders) {
-            manager.transcoders.remove(this);
-        }
-
-        Archiver.instance.youTubeManager.upload(vod);
-    }
-
-    public int getPartsCompleted() {
-        synchronized (parts) {
-            return Math.toIntExact(parts.stream().filter(part -> part.done).count());
         }
     }
 }

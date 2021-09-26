@@ -49,17 +49,11 @@ public class Migrations {
                                           "created_at bigint(20) NOT NULL," +
                                           "title varchar(120) NOT NULL," +
                                           "description text NOT NULL," +
+                                          "youtube_id char(11) NOT NULL," +
                                           "downloaded boolean NOT NULL DEFAULT 0," +
                                           "transcoded boolean NOT NULL DEFAULT 0," +
                                           "uploaded boolean NOT NULL DEFAULT 0," +
-                                          "parts int NOT NULL DEFAULT 0," +
                                           "PRIMARY KEY (id));");
-        Archiver.database.execute("CREATE TABLE IF NOT EXISTS youtube_videos(" +
-                                          "video_id char(11) NOT NULL," +
-                                          "vod int NOT NULL," +
-                                          "part_number int NOT NULL," +
-                                          "PRIMARY KEY (video_id)," +
-                                          "FOREIGN KEY (vod) REFERENCES vods (id));");
         Archiver.database.execute("CREATE TABLE IF NOT EXISTS chat(" +
                                           "id char(36) NOT NULL," + // message UUID
                                           "channel int NOT NULL," + // channel ID
