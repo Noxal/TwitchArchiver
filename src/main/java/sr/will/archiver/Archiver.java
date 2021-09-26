@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import sr.will.archiver.config.Config;
 import sr.will.archiver.deleter.DeletionManager;
 import sr.will.archiver.entity.Vod;
-import sr.will.archiver.ffmpeg.TranscodeManager;
+import sr.will.archiver.transcode.TranscodeManager;
 import sr.will.archiver.notification.WebhookManager;
 import sr.will.archiver.sql.Database;
 import sr.will.archiver.sql.Migrations;

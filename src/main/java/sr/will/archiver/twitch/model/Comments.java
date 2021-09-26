@@ -1,11 +1,13 @@
 package sr.will.archiver.twitch.model;
 
 import com.google.gson.JsonObject;
+import sr.will.archiver.Archiver;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Comments {
-    public List<Comment> comments;
+    public List<Comment> comments = new ArrayList<>();
     public String _next; // id of next comment segment
     public String _prev; // id of previous comment segment
 
@@ -18,9 +20,23 @@ public class Comments {
         public String content_id; // twitch vod id
         public double content_offset_seconds;
         public Commenter commenter;
-        //public String source; // always "chat" in this context
+        public String source; // always "chat" in this context
         //public String state; // "published"
         public Message message;
+
+        public Comment(String id, String channelId, String vodId, double offset, String author, String message) {
+            this._id = id;
+            this.channel_id = channelId;
+            this.content_id = vodId;
+            this.content_offset_seconds = offset;
+
+            this.commenter = new Commenter();
+            this.commenter.display_name = author;
+
+            this.message = Archiver.GSON.fromJson(message, Message.class);
+
+            this.source = "chat";
+        }
 
         public static class Commenter {
             //public String _id;

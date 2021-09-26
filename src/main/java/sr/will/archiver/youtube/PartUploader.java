@@ -64,7 +64,7 @@ public class PartUploader {
             size = mediaContent.getLength();
 
             YouTube.Videos.Insert insert = uploader.manager.youTube.videos()
-                                                   .insert(Arrays.asList("snippet", "status"), video, mediaContent);
+                    .insert(Arrays.asList("snippet", "status"), video, mediaContent);
             MediaHttpUploader uploader = insert.getMediaHttpUploader();
             uploader.setDirectUploadEnabled(true);
 
@@ -88,7 +88,9 @@ public class PartUploader {
 
     public String getReplacedString(String original) {
         return vod.getReplacedString(original)
-                       .replace("{part}", (part + 1) + "");
+                .replace("<", "")
+                .replace(">", "")
+                .replace("{part}", (part + 1) + "");
     }
 
     public void markComplete() {

@@ -1,4 +1,4 @@
-package sr.will.archiver.ffmpeg;
+package sr.will.archiver.transcode;
 
 import net.bramp.ffmpeg.builder.FFmpegBuilder;
 import net.bramp.ffmpeg.probe.FFmpegFormat;
@@ -6,6 +6,7 @@ import net.bramp.ffmpeg.probe.FFmpegProbeResult;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.entity.Vod;
 import sr.will.archiver.notification.NotificationEvent;
+import sr.will.archiver.transcode.chatrender.ChatRenderer;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ public class VideoTranscoder {
     private final TranscodeManager manager;
     public final Vod vod;
     public FFmpegProbeResult probe;
+    public ChatRenderer chatRenderer;
     public final List<PartTranscoder> parts = new ArrayList<>();
 
     public VideoTranscoder(TranscodeManager manager, Vod vod) {
@@ -62,6 +64,9 @@ public class VideoTranscoder {
             new File(vod.getTranscodeDir()).mkdirs();
             probe = TranscodeManager.ffprobe.probe(playlist.getPath());
 
+            // Don't queue the chat renderer until here because it relies on the probe results
+            chatRenderer = new ChatRenderer(this);
+
             FFmpegFormat format = probe.getFormat();
             Archiver.LOGGER.info("vod length: {}s ({} minutes), parts: {}", format.duration, (int) Math.ceil(format.duration / 60), (int) Math.ceil(format.duration / (Archiver.config.transcode.maxVideoLength * 60)));
 
@@ -93,15 +98,15 @@ public class VideoTranscoder {
 
     private void createTranscoder(long startOffset, long duration, int part) {
         FFmpegBuilder builder = new FFmpegBuilder()
-                                        .setInput(probe)
-                                        .addOutput(vod.getTranscodeDir() + vod.id + "-" + part + ".mp4")
-                                        .setStartOffset(startOffset, TimeUnit.MILLISECONDS)
-                                        .setDuration(duration, TimeUnit.MILLISECONDS)
-                                        .setVideoCodec("copy")
-                                        .setAudioCodec("copy")
-                                        .addExtraArgs("-copyts", "-start_at_zero")
-                                        //"-bsf:a aac_adtstoasc"
-                                        .done();
+                .setInput(probe)
+                .addOutput(vod.getTranscodeDir() + vod.id + "-" + part + ".mp4")
+                .setStartOffset(startOffset, TimeUnit.MILLISECONDS)
+                .setDuration(duration, TimeUnit.MILLISECONDS)
+                .setVideoCodec("copy")
+                .setAudioCodec("copy")
+                .addExtraArgs("-copyts", "-start_at_zero")
+                //"-bsf:a aac_adtstoasc"
+                .done();
 
         parts.add(new PartTranscoder(this, vod, TranscodeManager.executor.createJob(builder), part));
     }

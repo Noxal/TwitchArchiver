@@ -1,7 +1,6 @@
 package sr.will.archiver.youtube;
 
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.json.gson.GsonFactory;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.config.Config;
 import sr.will.archiver.entity.Vod;
@@ -12,11 +11,10 @@ public class YouTubeManager {
     public final Map<String, YouTubeClient> clients = new HashMap<>();
 
     public static final Collection<String> scopes = Arrays.asList(
-            "https://www.googleapis.com/auth/youtube.upload",
-            "https://www.googleapis.com/auth/youtube.force-ssl"
+            "https://www.googleapis.com/auth/youtube.upload"
     );
 
-    public static final JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
+    public static final GsonFactory jsonFactory = GsonFactory.getDefaultInstance();
 
     public YouTubeManager() {
         for (Config.ArchiveSet archiveSet : Archiver.config.archiveSets) {

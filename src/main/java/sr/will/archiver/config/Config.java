@@ -4,11 +4,12 @@ import com.google.gson.annotations.SerializedName;
 import sr.will.archiver.notification.NotificationEvent;
 
 import java.io.File;
+import java.io.Serializable;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 
-public class Config {
+public class Config implements Serializable {
     public Twitch twitch = new Twitch();
     public Database database = new Database();
     public List<ArchiveSet> archiveSets = Arrays.asList(
@@ -18,6 +19,7 @@ public class Config {
     public Download download = new Download();
     public Transcode transcode = new Transcode();
     public Upload upload = new Upload();
+    public TwitchDownloader twitchDownloader = new TwitchDownloader();
     public List<WebHook> notifications = Arrays.asList(
             new WebHook("DISCORD_WEBHOOK_URL", WebHook.Type.DISCORD)
     );
@@ -39,10 +41,23 @@ public class Config {
         public String twitchUser;
         public int numVideos = 2;
         public boolean downloadChat = true;
+        public boolean renderChat = true;
         public boolean upload = false;
+        public ChatRender chatRender = new ChatRender();
         public YouTube youTube = new YouTube();
         public DeletionPolicy downloadDeletionPolicy = new DeletionPolicy();
         public DeletionPolicy transcodeDeletionPolicy = new DeletionPolicy();
+
+        public static class ChatRender {
+            // https://github.com/lay295/TwitchDownloader/blob/master/TwitchDownloaderCLI/README.md#arguments-for-mode-chatrender
+            public List<String> args = Arrays.asList(
+                    "--background-color", "#00000000", // https://docs.microsoft.com/en-us/dotnet/api/skiasharp.skcolor.parse#remarks #AARRGGBB
+                    "--outline"
+            );
+
+            public int pos_x;
+            public int pos_y;
+        }
 
         public static class YouTube {
             public Google google = new Google();
@@ -84,6 +99,7 @@ public class Config {
         }
 
         public void validate() {
+            if (chatRender == null) chatRender = new ChatRender();
             if (youTube == null) youTube = new YouTube();
             if (downloadDeletionPolicy == null) downloadDeletionPolicy = new DeletionPolicy();
             if (transcodeDeletionPolicy == null) transcodeDeletionPolicy = new DeletionPolicy();
@@ -137,6 +153,11 @@ public class Config {
             }
             return true;
         }
+    }
+
+    public static class TwitchDownloader {
+        public String path = "TwitchDownloaderCLI.exe";
+        public String tempPath = "emotes";
     }
 
     public static class WebHook {

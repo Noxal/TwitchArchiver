@@ -96,9 +96,9 @@ public class ChannelDownloader {
         // Fastest time is just the goOfflineDelay, slowest time is goOfflineDelay + liveCheckInterval
 
         List<VodDownloader> liveVods = vodDownloaders.stream()
-                                               .filter(downloader -> downloader.stream != null)
-                                               .sorted(Comparator.comparing(downloader -> downloader.vod.createdAt))
-                                               .collect(Collectors.toList());
+                .filter(downloader -> downloader.stream != null)
+                .sorted(Comparator.comparing(downloader -> downloader.vod.createdAt))
+                .collect(Collectors.toList());
 
         if (liveVods.size() == 0) {
             Archiver.LOGGER.error("Attempted to mark stream as complete, but no vods are marked as streaming");
