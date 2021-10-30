@@ -63,5 +63,10 @@ public class Migrations {
                                           "message longtext NOT NULL," + // json blob of the message
                                           "PRIMARY KEY (id)," +
                                           "FOREIGN KEY (vod) REFERENCES vods(id));");
+        Archiver.database.execute("CREATE TABLE IF NOT EXISTS credentials(" +
+                                          "`key` varchar(255) NOT NULL," +
+                                          "updated bigint(20) NOT NULL," +
+                                          "value longtext NOT NULL," +
+                                          "PRIMARY KEY (`key`));");
     }
 }

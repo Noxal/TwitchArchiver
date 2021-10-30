@@ -8,7 +8,7 @@ import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoSnippet;
 import com.google.api.services.youtube.model.VideoStatus;
 import sr.will.archiver.Archiver;
-import sr.will.archiver.config.Config;
+import sr.will.archiver.config.ArchiveSet;
 import sr.will.archiver.entity.Vod;
 import sr.will.archiver.notification.NotificationEvent;
 
@@ -18,22 +18,27 @@ import java.io.FileInputStream;
 import java.util.Arrays;
 
 public class VideoUploader {
-    public final YouTubeClient manager;
+    public final ChannelUploader manager;
     public final Vod vod;
+    public boolean pending;
 
-    public VideoUploader(YouTubeClient manager, Vod vod) {
+    public VideoUploader(ChannelUploader manager, Vod vod, boolean pending) {
         this.manager = manager;
         this.vod = vod;
+        this.pending = pending;
 
+        if (pending) return;
         Archiver.uploadExecutor.submit(this::run);
     }
 
     public void run() {
+        pending = false;
+
         Archiver.LOGGER.info("Starting upload for vod {} on channel {}", vod.id, vod.channelId);
         Archiver.instance.webhookManager.execute(NotificationEvent.UPLOAD_START, vod);
 
         try {
-            Config.ArchiveSet archiveSet = Archiver.getArchiveSet(vod.channelId);
+            ArchiveSet archiveSet = Archiver.getArchiveSet(vod.channelId);
             if (archiveSet == null) {
                 Archiver.LOGGER.error("Archive configuration for channel {} is missing, cancelling upload", vod.channelId);
                 return;
@@ -54,10 +59,9 @@ public class VideoUploader {
             status.setMadeForKids(archiveSet.youTube.madeForKids);
             video.setStatus(status);
 
-            File mediaFile = new File(vod.getTranscodeDir(), vod.id + ".mp4");
+            File mediaFile = new File(vod.getTranscodeDir(), vod.id + ".mkv");
             InputStreamContent mediaContent = new InputStreamContent("application/octet-stream",
                     new BufferedInputStream(new FileInputStream(mediaFile)));
-            mediaContent.setLength(mediaContent.getLength());
 
             YouTube.Videos.Insert insert = manager.youTube.videos()
                     .insert(Arrays.asList("snippet", "status"), video, mediaContent);
@@ -66,24 +70,21 @@ public class VideoUploader {
 
             Video response = insert.execute();
 
-            Archiver.database.execute("REPLACE INTO youtube_videos (video_id, vod) VALUES (?, ?)", response.getId(), vod.id);
-
+            vod.setUploaded(response.getId());
             Archiver.LOGGER.info("Completed upload for vod {} on channel {}", vod.id, vod.channelId);
             Archiver.instance.webhookManager.execute(NotificationEvent.UPLOAD_FINISH, vod);
-            vod.setUploaded(response.getId());
 
-            synchronized (manager.uploaders) {
-                manager.uploaders.remove(this);
+            synchronized (manager.videoUploaders) {
+                manager.videoUploaders.remove(this);
             }
 
             Archiver.instance.deletionManager.run();
         } catch (Exception e) {
             Archiver.LOGGER.error("Failed to upload vod {} on channel {}", vod.id, vod.channelId);
             Archiver.instance.webhookManager.execute(NotificationEvent.UPLOAD_FAIL, vod);
+            e.printStackTrace();
             if (e instanceof GoogleJsonResponseException) {
                 Archiver.LOGGER.info(((GoogleJsonResponseException) e).getDetails().getMessage());
-            } else {
-                e.printStackTrace();
             }
         }
     }

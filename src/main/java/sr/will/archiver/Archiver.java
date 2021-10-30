@@ -12,6 +12,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sr.will.archiver.config.ArchiveSet;
 import sr.will.archiver.config.Config;
 import sr.will.archiver.deleter.DeletionManager;
 import sr.will.archiver.entity.Vod;
@@ -22,6 +23,7 @@ import sr.will.archiver.transcode.TranscodeManager;
 import sr.will.archiver.twitch.ChannelDownloader;
 import sr.will.archiver.twitch.EventHandler;
 import sr.will.archiver.util.FileUtil;
+import sr.will.archiver.web.WebManager;
 import sr.will.archiver.youtube.YouTubeManager;
 
 import java.sql.ResultSet;
@@ -57,9 +59,9 @@ public class Archiver {
     public final Map<String, String> usernames = new HashMap<>();
     public final List<ChannelDownloader> channelDownloaders = new ArrayList<>();
     public final TranscodeManager transcodeManager;
-    public final YouTubeManager youTubeManager;
     public final WebhookManager webhookManager;
     public final DeletionManager deletionManager;
+    public final YouTubeManager youTubeManager;
 
     public Archiver() {
         instance = this;
@@ -76,6 +78,8 @@ public class Archiver {
         transcodeExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.transcode.threads, new ThreadFactoryBuilder().setNameFormat("transcode-%d").build());
         uploadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Archiver.config.upload.threads, new ThreadFactoryBuilder().setNameFormat("upload-%d").build());
         scheduledExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(10, new ThreadFactoryBuilder().setNameFormat("scheduled-%d").build());
+
+        new WebManager();
 
         webhookManager = new WebhookManager();
         initializeTwitchClient();
@@ -204,9 +208,9 @@ public class Archiver {
         return getVods(List.of(vodId)).get(0);
     }
 
-    public static Config.ArchiveSet getArchiveSet(String channelId) {
+    public static ArchiveSet getArchiveSet(String channelId) {
         String username = instance.usernames.get(channelId);
-        for (Config.ArchiveSet set : config.archiveSets) {
+        for (ArchiveSet set : config.archiveSets) {
             if (set.twitchUser.equalsIgnoreCase(username)) {
                 return set;
             }

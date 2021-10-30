@@ -17,7 +17,6 @@ public class VideoTranscoder {
     private final TranscodeManager manager;
     public final Vod vod;
     public FFmpegProbeResult probe;
-    public ChatRenderer chatRenderer;
 
     public VideoTranscoder(TranscodeManager manager, Vod vod) {
         this.manager = manager;
@@ -57,25 +56,19 @@ public class VideoTranscoder {
             playlistReader.close();
             playlistWriter.close();
 
-            // Attempt to transcode into segments with ffmpeg
+            // Attempt to transcode with ffmpeg
             new File(vod.getTranscodeDir()).mkdirs();
             probe = TranscodeManager.ffprobe.probe(playlist.getPath());
 
-            // Don't queue the chat renderer until here because it relies on the probe results
-            chatRenderer = new ChatRenderer(this);
-
             FFmpegFormat format = probe.getFormat();
-            Archiver.LOGGER.info("vod length: {}s ({} minutes), parts: {}", format.duration, (int) Math.ceil(format.duration / 60), (int) Math.ceil(format.duration / (Archiver.config.transcode.maxVideoLength * 60)));
+            Archiver.LOGGER.info("vod length: {}s ({} minutes)", format.duration, (int) Math.ceil(format.duration / 60));
 
-            FFmpegBuilder builder = new FFmpegBuilder()
-                    .setInput(probe)
-                    .addOutput(vod.getTranscodeDir() + vod.id + ".mp4")
-                    .setVideoCodec("copy")
-                    .setAudioCodec("copy")
-                    .addExtraArgs("-copyts", "-start_at_zero")
-                    .done();
+            if (Archiver.getArchiveSet(vod.channelId).renderChat) {
+                transcodeWithChat();
+            } else {
+                transcodeWithoutChat();
+            }
 
-            TranscodeManager.executor.createJob(builder).run();
             vod.setTranscoded();
 
             Archiver.LOGGER.info("Completed transcode for vod {} on channel {}", vod.id, vod.channelId);
@@ -86,7 +79,7 @@ public class VideoTranscoder {
             }
 
             Archiver.instance.youTubeManager.upload(vod);
-        } catch (IOException e) {
+        } catch (Exception e) {
             Archiver.LOGGER.error("Failed to transcode vod {} on channel {}", vod.id, vod.channelId);
             Archiver.instance.webhookManager.execute(NotificationEvent.TRANSCODE_FAIL, vod);
             e.printStackTrace();
@@ -98,5 +91,43 @@ public class VideoTranscoder {
                 e.printStackTrace();
             }
         }
+    }
+
+    public void transcodeWithChat() throws Exception {
+        long chatStartTime = System.currentTimeMillis();
+
+        ChatRenderer chatRenderer = new ChatRenderer(this);
+        chatRenderer.renderThirdParty();
+
+        Archiver.LOGGER.info("Finished rendering chat in {} seconds", (System.currentTimeMillis() - chatStartTime) / 100);
+
+        long transcodeTime = System.currentTimeMillis();
+
+        FFmpegBuilder builder = new FFmpegBuilder()
+                .addInput(vod.getTranscodeDir() + "chat.mkv")
+                .addInput(vod.getTranscodeDir() + "chat_mask.mkv")
+                .addInput(probe)
+                .setComplexFilter(Archiver.getArchiveSet(vod.channelId).chatRender.filter)
+                .addOutput(vod.getTranscodeDir() + vod.id + ".mkv")
+                .setVideoCodec(Archiver.config.chatRender.encoder)
+                .setAudioCodec("copy")
+                .addExtraArgs("-copyts", "-start_at_zero")
+                .done();
+
+        TranscodeManager.executor.createJob(builder).run();
+
+        Archiver.LOGGER.info("Finished transcoding with chat in {} seconds", (System.currentTimeMillis() - transcodeTime) / 100);
+    }
+
+    public void transcodeWithoutChat() {
+        FFmpegBuilder builder = new FFmpegBuilder()
+                .addInput(probe)
+                .addOutput(vod.getTranscodeDir() + vod.id + ".mkv")
+                .setVideoCodec("copy")
+                .setAudioCodec("copy")
+                .addExtraArgs("-copyts", "-start_at_zero")
+                .done();
+
+        TranscodeManager.executor.createJob(builder).run();
     }
 }

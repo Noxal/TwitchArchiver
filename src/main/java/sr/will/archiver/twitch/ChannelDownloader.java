@@ -4,7 +4,7 @@ import com.github.twitch4j.helix.domain.Stream;
 import com.github.twitch4j.helix.domain.Video;
 import com.github.twitch4j.helix.domain.VideoList;
 import sr.will.archiver.Archiver;
-import sr.will.archiver.config.Config;
+import sr.will.archiver.config.ArchiveSet;
 import sr.will.archiver.entity.Vod;
 import sr.will.archiver.notification.NotificationEvent;
 import sr.will.archiver.twitch.vod.VodDownloader;
@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 public class ChannelDownloader {
     public String userId;
     public List<Stream> unhandledStreams = new ArrayList<>();
-    public Config.ArchiveSet archiveSet;
+    public ArchiveSet archiveSet;
     public final List<VodDownloader> vodDownloaders = new ArrayList<>();
     public List<Vod> vods;
 

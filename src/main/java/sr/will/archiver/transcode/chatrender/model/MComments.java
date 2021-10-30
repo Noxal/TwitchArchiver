@@ -4,6 +4,10 @@ import sr.will.archiver.twitch.model.Comments;
 
 import java.io.Serializable;
 
+// This model is based on the TwitchDownloader json file for chat messages
+// This way we can pull the chat from the database instead of having TwitchDownloader download it
+// This is simply because the chat downloading algorithm in this program more time efficient
+// and the file is significantly smaller since some of the unneeded junk from the API is cut out
 public class MComments extends Comments implements Serializable {
     public Streamer streamer;
     public Video video;

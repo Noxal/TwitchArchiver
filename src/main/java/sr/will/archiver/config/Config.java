@@ -1,26 +1,26 @@
 package sr.will.archiver.config;
 
-import com.google.gson.annotations.SerializedName;
 import sr.will.archiver.notification.NotificationEvent;
 
 import java.io.File;
 import java.io.Serializable;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class Config implements Serializable {
     public Twitch twitch = new Twitch();
     public Database database = new Database();
-    public List<ArchiveSet> archiveSets = Arrays.asList(
+    public List<ArchiveSet> archiveSets = List.of(
             new ArchiveSet("Willsr71"),
             new ArchiveSet("Apron__")
     );
     public Download download = new Download();
     public Transcode transcode = new Transcode();
     public Upload upload = new Upload();
-    public TwitchDownloader twitchDownloader = new TwitchDownloader();
-    public List<WebHook> notifications = Arrays.asList(
+    public ChatRender chatRender = new ChatRender();
+    public List<WebHook> notifications = List.of(
             new WebHook("DISCORD_WEBHOOK_URL", WebHook.Type.DISCORD)
     );
     public Times times = new Times();
@@ -37,78 +37,6 @@ public class Config implements Serializable {
         public String password = "DB_PASSWORD";
     }
 
-    public static class ArchiveSet {
-        public String twitchUser;
-        public int numVideos = 2;
-        public boolean downloadChat = true;
-        public boolean renderChat = true;
-        public boolean upload = false;
-        public ChatRender chatRender = new ChatRender();
-        public YouTube youTube = new YouTube();
-        public DeletionPolicy downloadDeletionPolicy = new DeletionPolicy();
-        public DeletionPolicy transcodeDeletionPolicy = new DeletionPolicy();
-
-        public static class ChatRender {
-            // https://github.com/lay295/TwitchDownloader/blob/master/TwitchDownloaderCLI/README.md#arguments-for-mode-chatrender
-            public List<String> args = Arrays.asList(
-                    "--background-color", "#00000000", // https://docs.microsoft.com/en-us/dotnet/api/skiasharp.skcolor.parse#remarks #AARRGGBB
-                    "--outline",
-                    "--output-args=\"-c:v h264_nvenc -preset veryfast -crf 18 -pix_fmt yuv420p '{save_path}'\""
-            );
-
-            public int pos_x;
-            public int pos_y;
-        }
-
-        public static class YouTube {
-            public Google google = new Google();
-
-            public String title = "{date}: {title} Part {part}/{parts}";
-            public String description = "Twitch vod streamed by {user} on {date}, {time}.\nVOD description: {description}";
-            public String category = "20";
-            public List<String> tags = Arrays.asList("Gaming", "Twitch");
-            public boolean madeForKids = false;
-            public boolean embeddable = true;
-            @SerializedName("public")
-            public boolean publicVideo = false;
-
-            public static class Google {
-                public String clientId = "GOOGLE_CLIENT_ID";
-                public String clientSecret = "GOOGLE_CLIENT_SECRET";
-            }
-
-            public void validate() {
-                if (google == null) google = new Google();
-            }
-        }
-
-        public static class DeletionPolicy {
-            public Mode mode = Mode.BOTH_MAX;
-            public int maxNum = 2;
-            public int maxAge = 7;
-
-            public enum Mode {
-                NUMBER,
-                AGE,
-                BOTH_MIN,
-                BOTH_MAX
-            }
-        }
-
-        public ArchiveSet(String twitchUser) {
-            this.twitchUser = twitchUser;
-        }
-
-        public void validate() {
-            if (chatRender == null) chatRender = new ChatRender();
-            if (youTube == null) youTube = new YouTube();
-            if (downloadDeletionPolicy == null) downloadDeletionPolicy = new DeletionPolicy();
-            if (transcodeDeletionPolicy == null) transcodeDeletionPolicy = new DeletionPolicy();
-
-            youTube.validate();
-        }
-    }
-
     public static class Download {
         public int threads = 5;
         public int chatThreads = 10;
@@ -122,7 +50,6 @@ public class Config implements Serializable {
     }
 
     public static class Transcode {
-        public int maxVideoLength = 2880;
         public int threads = 1;
         public String directory = "transcodes";
         public String ffmpegLocation = "E:\\Downloads\\ffmpeg-4.4-essentials_build\\bin\\ffmpeg";
@@ -139,10 +66,13 @@ public class Config implements Serializable {
         public String dateFormat = "yyyy-MM-dd";
         public String timeFormat = "hh:mm";
 
+        public Google google = new Google();
+
         public void validate() {
             if (threads <= 0) throw new RuntimeException("Cannot have less than 1 upload thread");
             if (!validatePattern(dateFormat)) throw new RuntimeException("Invalid upload date pattern");
             if (!validatePattern(timeFormat)) throw new RuntimeException("Invalid upload time pattern");
+            if (google == null) google = new Google();
         }
 
         private boolean validatePattern(String pattern) {
@@ -154,11 +84,19 @@ public class Config implements Serializable {
             }
             return true;
         }
+
+        public static class Google {
+            public String clientId = "GOOGLE_CLIENT_ID";
+            public String clientSecret = "GOOGLE_CLIENT_SECRET";
+            public String baseUrl = "http://localhost:80";
+            public int oAuthPort = 80;
+        }
     }
 
-    public static class TwitchDownloader {
-        public String path = "TwitchDownloaderCLI.exe";
-        public String tempPath = "emotes";
+    public static class ChatRender {
+        public String twitchDownloaderPath = "TwitchDownloaderCLI.exe";
+        public String twitchDownloaderTempPath = "emotes";
+        public String encoder = "libx264";
     }
 
     public static class WebHook {
@@ -187,8 +125,13 @@ public class Config implements Serializable {
     }
 
     public void validate() {
+        List<String> twitchUsers = new ArrayList<>();
         for (ArchiveSet archiveSet : archiveSets) {
             archiveSet.validate();
+            if (twitchUsers.contains(archiveSet.twitchUser)) {
+                throw new RuntimeException("You cannot have the same Twitch user in multiple archive sets");
+            }
+            twitchUsers.add(archiveSet.twitchUser);
         }
         download.validate();
         transcode.validate();

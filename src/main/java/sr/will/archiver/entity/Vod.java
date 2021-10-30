@@ -1,6 +1,7 @@
 package sr.will.archiver.entity;
 
 import sr.will.archiver.Archiver;
+import sr.will.archiver.config.ArchiveSet;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -23,6 +24,7 @@ public class Vod {
         this.createdAt = createdAt;
         this.title = title;
         this.description = description;
+        this.youtubeId = youtubeId;
         this.downloaded = downloaded;
         this.transcoded = transcoded;
         this.uploaded = uploaded;

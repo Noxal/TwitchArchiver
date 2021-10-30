@@ -3,7 +3,6 @@ package sr.will.archiver.transcode.chatrender;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.entity.Comment;
 import sr.will.archiver.entity.Message;
-import sr.will.archiver.entity.SimpleComment;
 import sr.will.archiver.transcode.VideoTranscoder;
 import sr.will.archiver.transcode.chatrender.model.MComments;
 import sr.will.archiver.util.FileUtil;
@@ -16,37 +15,19 @@ import java.util.List;
 
 public class ChatRenderer {
     private final VideoTranscoder transcoder;
-    public List<MessageRenderer> messageRenderers = new ArrayList<>();
 
     public ChatRenderer(VideoTranscoder transcoder) {
         this.transcoder = transcoder;
-
-        Archiver.transcodeExecutor.submit(this::run);
     }
 
     public void run() {
         Archiver.LOGGER.info("Starting chat render for vod {} on channel {}", transcoder.vod.id, transcoder.vod.channelId);
 
         try {
-            renderMessages();
-            //renderThirdParty();
+            renderThirdParty();
         } catch (Exception e) {
             Archiver.LOGGER.error("Failed to render chat for vod {} on channel {}", transcoder.vod.id, transcoder.vod.channelId);
             e.printStackTrace();
-        }
-    }
-
-    public void renderMessages() throws SQLException {
-        ResultSet result = Archiver.database.query("SELECT id, `offset`, author, message FROM chat WHERE vod = ? ORDER BY `offset` ASC;", transcoder.vod.id);
-        while (result.next()) {
-            messageRenderers.add(new MessageRenderer(new SimpleComment(
-                    transcoder.vod,
-                    result.getString("id"),
-                    result.getDouble("offset"),
-                    result.getString("author"),
-                    result.getString("message")
-            )));
-            break;
         }
     }
 
@@ -54,19 +35,20 @@ public class ChatRenderer {
         createJsonFile();
 
         List<String> args = new ArrayList<>(Arrays.asList(
-                Archiver.config.twitchDownloader.path,
+                Archiver.config.chatRender.twitchDownloaderPath,
                 "--ffmpeg-path", Archiver.config.transcode.ffmpegLocation,
-                "--temp-path", Archiver.config.twitchDownloader.tempPath,
+                "--temp-path", Archiver.config.chatRender.twitchDownloaderTempPath,
                 "-m", "ChatRender",
                 "-i", transcoder.vod.getTranscodeDir() + "chat.json",
-                "-o", transcoder.vod.getTranscodeDir() + "chat.mov"
+                "-o", transcoder.vod.getTranscodeDir() + "chat.mkv",
+                "-w", Archiver.getArchiveSet(transcoder.vod.channelId).chatRender.window.width + "",
+                "-h", Archiver.getArchiveSet(transcoder.vod.channelId).chatRender.window.height + ""
         ));
         args.addAll(Archiver.getArchiveSet(transcoder.vod.channelId).chatRender.args);
 
-        ProcessBuilder builder = new ProcessBuilder(args);
-        builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
-        builder.redirectError(ProcessBuilder.Redirect.INHERIT);
-        Archiver.LOGGER.info("command: {}", builder.command());
+        ProcessBuilder builder = new ProcessBuilder(args).inheritIO();
+        Archiver.LOGGER.info("command: {}", String.join(" ", builder.command()));
+
         Process process = builder.start();
 
         int result = process.waitFor();
