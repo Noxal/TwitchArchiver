@@ -4,7 +4,7 @@ import com.github.twitch4j.helix.domain.Stream;
 import com.github.twitch4j.helix.domain.Video;
 import com.github.twitch4j.helix.domain.VideoList;
 import sr.will.archiver.Archiver;
-import sr.will.archiver.config.Config;
+import sr.will.archiver.config.ArchiveSet;
 import sr.will.archiver.entity.Vod;
 import sr.will.archiver.notification.NotificationEvent;
 import sr.will.archiver.twitch.vod.VodDownloader;
@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 public class ChannelDownloader {
     public String userId;
     public List<Stream> unhandledStreams = new ArrayList<>();
-    public Config.ArchiveSet archiveSet;
+    public ArchiveSet archiveSet;
     public final List<VodDownloader> vodDownloaders = new ArrayList<>();
     public List<Vod> vods;
 
@@ -96,9 +96,9 @@ public class ChannelDownloader {
         // Fastest time is just the goOfflineDelay, slowest time is goOfflineDelay + liveCheckInterval
 
         List<VodDownloader> liveVods = vodDownloaders.stream()
-                                               .filter(downloader -> downloader.stream != null)
-                                               .sorted(Comparator.comparing(downloader -> downloader.vod.createdAt))
-                                               .collect(Collectors.toList());
+                .filter(downloader -> downloader.stream != null)
+                .sorted(Comparator.comparing(downloader -> downloader.vod.createdAt))
+                .collect(Collectors.toList());
 
         if (liveVods.size() == 0) {
             Archiver.LOGGER.error("Attempted to mark stream as complete, but no vods are marked as streaming");
@@ -115,6 +115,6 @@ public class ChannelDownloader {
         Vod vod = Archiver.instance.getVod(vodId);
         if (vod != null) return vod;
 
-        return new Vod(vodId, userId, createdAt, title, description, false, false, false, 0).create();
+        return new Vod(vodId, userId, createdAt, title, description, null, false, false, false).create();
     }
 }

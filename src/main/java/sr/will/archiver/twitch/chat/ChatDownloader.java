@@ -35,8 +35,13 @@ public class ChatDownloader {
         // Start at the end of the video going backwards
         sections.add(new ChatSectionDownloader(this, Direction.BACKWARD, null, vodDownloader.playlistInfo.duration));
 
-        // Start at the middle going both directions
-        sections.add(new ChatSectionDownloader(this, Direction.BOTH, null, ((vodDownloader.playlistInfo.duration - offset) / 2) + offset));
+        // Don't start additional threads if the threshold is less than 1 minute. This is already obscenely short, any less is absurd
+        if (vodDownloader.channelDownloader.archiveSet.chatDownloadThreadIncrement <= 60) return;
+
+        // Start a downloader every x seconds going in both directions
+        for (double i = offset; i < vodDownloader.playlistInfo.duration; i += vodDownloader.channelDownloader.archiveSet.chatDownloadThreadIncrement) {
+            sections.add(new ChatSectionDownloader(this, Direction.BOTH, null, i));
+        }
     }
 
     public float getChatStartOffset() {

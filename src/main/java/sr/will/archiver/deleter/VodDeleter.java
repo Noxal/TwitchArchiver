@@ -3,7 +3,7 @@ package sr.will.archiver.deleter;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.ArrayUtils;
 import sr.will.archiver.Archiver;
-import sr.will.archiver.config.Config;
+import sr.will.archiver.config.ArchiveSet;
 import sr.will.archiver.entity.Vod;
 import sr.will.archiver.notification.NotificationEvent;
 
@@ -19,7 +19,7 @@ public class VodDeleter {
     public String channelId;
     public String vodId;
     public Vod vod;
-    Config.ArchiveSet.DeletionPolicy deletionPolicy;
+    ArchiveSet.DeletionPolicy deletionPolicy;
 
     public long lastRun;
 
@@ -104,8 +104,8 @@ public class VodDeleter {
         return vods.length - ArrayUtils.indexOf(vods, vod.id) > deletionPolicy.maxNum;
     }
 
-    private Config.ArchiveSet.DeletionPolicy getDeletionPolicy() {
-        Config.ArchiveSet archiveSet = Archiver.getArchiveSet(channelId);
+    private ArchiveSet.DeletionPolicy getDeletionPolicy() {
+        ArchiveSet archiveSet = Archiver.getArchiveSet(channelId);
         if (archiveSet == null) return null;
         switch (this.type) {
             case DOWNLOADED:

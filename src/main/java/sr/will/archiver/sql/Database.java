@@ -74,7 +74,7 @@ public class Database {
 
     private void log(PreparedStatement statement) {
         if (debug) {
-            System.out.println(getStatementString(statement));
+            LOGGER.info(statement.toString());
         }
     }
 
@@ -86,10 +86,6 @@ public class Database {
         for (Consumer<PreparedStatement> hook : hooks) {
             hook.accept(statement);
         }
-    }
-
-    public static String getStatementString(PreparedStatement statement) {
-        return statement.toString().split(": ")[1];
     }
 
     public PreparedStatement replaceParams(PreparedStatement statement, Object... params) throws SQLException {
