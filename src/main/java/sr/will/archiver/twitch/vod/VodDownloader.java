@@ -21,8 +21,8 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
@@ -32,7 +32,7 @@ public class VodDownloader {
     public PlaylistInfo playlistInfo;
     public Stream stream;
     public ChatDownloader chatDownloader;
-    public final List<PartDownloader> parts = new ArrayList<>();
+    public final Map<String, PartDownloader> parts = new HashMap<>();
 
     public VodDownloader(ChannelDownloader channelDownloader, Vod vod, Stream stream) {
         this.channelDownloader = channelDownloader;
@@ -81,18 +81,19 @@ public class VodDownloader {
             Archiver.instance.webhookManager.execute(NotificationEvent.DOWNLOAD_START, vod, stream);
         }
 
-        for (int x = parts.size(); x < playlistInfo.parts.size(); x++) {
-            parts.add(new PartDownloader(this, playlistInfo.baseURL, playlistInfo.parts.get(x)));
-        }
+        playlistInfo.getOriginalAndCurrentParts().forEach((part, optional) -> {
+            if (parts.containsKey(part)) return;
+            parts.put(part, new PartDownloader(this, playlistInfo.baseURL, part, optional));
+        });
 
         if (!channelDownloader.archiveSet.downloadChat) checkCompleted();
     }
 
     public PlaylistInfo getM3u8(PlaybackAccessToken token) throws IOException {
         URL url = new URL("https://usher.ttvnw.net/vod/" + vod.id + ".m3u8?" +
-                                  "allow_source=true&player=twitchweb&playlist_include_framerate=true&allow_spectre=true" +
-                                  "&token=" + URLEncoder.encode(token.token, "UTF-8") +
-                                  "&sig=" + token.signature
+                "allow_source=true&player=twitchweb&playlist_include_framerate=true&allow_spectre=true" +
+                "&token=" + URLEncoder.encode(token.token, StandardCharsets.UTF_8) +
+                "&sig=" + token.signature
         );
         Scanner qualityPlaylistScanner = new Scanner(url.openStream());
         while (qualityPlaylistScanner.hasNext()) {
@@ -123,8 +124,8 @@ public class VodDownloader {
         connection.connect();
 
         JsonElement tokenJson = JsonParser.parseReader(new InputStreamReader(connection.getInputStream())).getAsJsonObject()
-                                        .get("data").getAsJsonObject()
-                                        .get("videoPlaybackAccessToken");
+                .get("data").getAsJsonObject()
+                .get("videoPlaybackAccessToken");
 
         if (tokenJson.isJsonNull()) throw new VodDeletedException();
         return new PlaybackAccessToken(tokenJson.getAsJsonObject().get("value").getAsString(), tokenJson.getAsJsonObject().get("signature").getAsString());
@@ -157,7 +158,7 @@ public class VodDownloader {
 
     public int getPartsCompleted() {
         synchronized (parts) {
-            return Math.toIntExact(parts.stream().filter(part -> part.done).count());
+            return Math.toIntExact(parts.values().stream().filter(part -> part.done).count());
         }
     }
 }

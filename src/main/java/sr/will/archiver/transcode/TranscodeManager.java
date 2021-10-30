@@ -1,4 +1,4 @@
-package sr.will.archiver.ffmpeg;
+package sr.will.archiver.transcode;
 
 import net.bramp.ffmpeg.FFmpeg;
 import net.bramp.ffmpeg.FFmpegExecutor;
