@@ -52,6 +52,7 @@ public class Config implements Serializable {
     public static class Transcode {
         public int threads = 1;
         public String directory = "transcodes";
+        public String outputFileType = "mkv";
         public String ffmpegLocation = "E:\\Downloads\\ffmpeg-4.4-essentials_build\\bin\\ffmpeg";
         public String ffprobeLocation = "E:\\Downloads\\ffmpeg-4.4-essentials_build\\bin\\ffprobe";
 

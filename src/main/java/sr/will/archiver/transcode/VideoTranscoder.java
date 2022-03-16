@@ -108,7 +108,7 @@ public class VideoTranscoder {
                 .addInput(vod.getTranscodeDir() + "chat_mask.mkv")
                 .addInput(probe)
                 .setComplexFilter(Archiver.getArchiveSet(vod.channelId).chatRender.filter)
-                .addOutput(vod.getTranscodeDir() + vod.id + ".mkv")
+                .addOutput(vod.getTranscodeDir() + vod.id + "." + Archiver.config.transcode.outputFileType)
                 .setVideoCodec(Archiver.config.chatRender.encoder)
                 .setAudioCodec("copy")
                 .addExtraArgs("-copyts", "-start_at_zero")
@@ -122,7 +122,7 @@ public class VideoTranscoder {
     public void transcodeWithoutChat() {
         FFmpegBuilder builder = new FFmpegBuilder()
                 .addInput(probe)
-                .addOutput(vod.getTranscodeDir() + vod.id + ".mkv")
+                .addOutput(vod.getTranscodeDir() + vod.id + "." + Archiver.config.transcode.outputFileType)
                 .setVideoCodec("copy")
                 .setAudioCodec("copy")
                 .addExtraArgs("-copyts", "-start_at_zero")
