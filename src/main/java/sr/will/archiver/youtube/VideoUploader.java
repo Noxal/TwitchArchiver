@@ -59,7 +59,7 @@ public class VideoUploader {
             status.setMadeForKids(archiveSet.youTube.madeForKids);
             video.setStatus(status);
 
-            File mediaFile = new File(vod.getTranscodeDir(), vod.id + ".mkv");
+            File mediaFile = new File(vod.getTranscodeDir(), vod.id + "." + Archiver.config.transcode.outputFileType);
             InputStreamContent mediaContent = new InputStreamContent("application/octet-stream",
                     new BufferedInputStream(new FileInputStream(mediaFile)));
 
