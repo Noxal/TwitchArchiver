@@ -5,9 +5,11 @@ import sr.will.archiver.notification.NotificationEvent;
 import java.io.File;
 import java.io.Serializable;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class Config implements Serializable {
     public Twitch twitch = new Twitch();
@@ -55,6 +57,7 @@ public class Config implements Serializable {
         public String outputFileType = "mkv";
         public String ffmpegLocation = "E:\\Downloads\\ffmpeg-4.4-essentials_build\\bin\\ffmpeg";
         public String ffprobeLocation = "E:\\Downloads\\ffmpeg-4.4-essentials_build\\bin\\ffprobe";
+        public long maxVideoLength = 720;
 
         public void validate() {
             if (threads <= 0) throw new RuntimeException("Cannot have less than 1 transcode thread");

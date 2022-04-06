@@ -1,11 +1,15 @@
 package sr.will.archiver.entity;
 
+import com.google.api.client.util.ArrayMap;
 import sr.will.archiver.Archiver;
-import sr.will.archiver.config.ArchiveSet;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Vod {
     public final String id;
@@ -13,21 +17,32 @@ public class Vod {
     public final Instant createdAt;
     public final String title;
     public final String description;
-    public String youtubeId;
+    public Map<Integer, String> youtubeIds;
     public boolean downloaded;
     public boolean transcoded;
     public boolean uploaded;
+    public int parts;
 
-    public Vod(String id, String channelId, Instant createdAt, String title, String description, String youtubeId, boolean downloaded, boolean transcoded, boolean uploaded) {
+    public Vod(String id, String channelId, Instant createdAt, String title, String description, boolean downloaded, boolean transcoded, boolean uploaded, int parts) {
         this.id = id;
         this.channelId = channelId;
         this.createdAt = createdAt;
         this.title = title;
         this.description = description;
-        this.youtubeId = youtubeId;
         this.downloaded = downloaded;
         this.transcoded = transcoded;
         this.uploaded = uploaded;
+        this.parts = parts;
+
+        ResultSet resultSet = Archiver.database.query("SELECT video_id, part_number FROM youtube_videos WHERE vod = ?;", id);
+        this.youtubeIds = new HashMap<>();
+        try {
+            while (resultSet.next()) {
+                this.youtubeIds.put(resultSet.getInt("part_number"), resultSet.getString("video_id"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public String getDownloadDir() {
@@ -48,15 +63,21 @@ public class Vod {
         Archiver.database.execute("UPDATE vods SET downloaded = 1 WHERE id = ?;", id);
     }
 
-    public void setTranscoded() {
+    public void setTranscoded(int parts) {
         this.transcoded = true;
-        Archiver.database.execute("UPDATE vods SET transcoded = 1 WHERE id = ?;", id);
+        this.parts = parts;
+        Archiver.database.execute("UPDATE vods SET transcoded = 1, parts = ? WHERE id = ?;", parts, id);
     }
 
-    public void setUploaded(String youtubeId) {
+    public void setUploaded(int part, String youtubeId) {
+        if (youtubeIds.containsKey(part) && youtubeIds.get(part).equals(youtubeId)) return;
+        youtubeIds.put(part, youtubeId);
+
+        Archiver.database.execute("INSERT IGNORE INTO youtube_videos (video_id, vod, part_number) VALUES (?, ?, ?);", youtubeId, id, part);
+        if (youtubeIds.size() < parts) return;
+
         this.uploaded = true;
-        this.youtubeId = youtubeId;
-        Archiver.database.execute("UPDATE vods SET uploaded = 1, youtube_id = ? WHERE id = ?;", youtubeId, id);
+        Archiver.database.execute("UPDATE vods SET uploaded = 1 WHERE id = ?;", id);
     }
 
     public String getReplacedString(String original) {
@@ -64,6 +85,7 @@ public class Vod {
                 .replace("{title}", title)
                 .replace("{user}", Archiver.instance.usernames.get(channelId))
                 .replace("{description}", description)
+                .replace("{parts}", parts + "")
                 .replace("{date}", getTimeString(Archiver.config.upload.dateFormat))
                 .replace("{time}", getTimeString(Archiver.config.upload.timeFormat));
     }

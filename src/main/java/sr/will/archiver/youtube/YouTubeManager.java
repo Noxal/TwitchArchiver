@@ -17,7 +17,8 @@ public class YouTubeManager {
     public static final GsonFactory jsonFactory = GsonFactory.getDefaultInstance();
     public static final Collection<String> scopes = List.of(
             "https://www.googleapis.com/auth/youtube.readonly",
-            "https://www.googleapis.com/auth/youtube.upload"
+            "https://www.googleapis.com/auth/youtube.upload",
+            "https://www.googleapis.com/auth/youtube.force-ssl"
     );
 
     public final Map<String, ChannelUploader> channelUploaders = new HashMap<>();

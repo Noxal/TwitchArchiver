@@ -3,6 +3,7 @@ package sr.will.archiver.transcode.chatrender;
 import sr.will.archiver.Archiver;
 import sr.will.archiver.entity.Comment;
 import sr.will.archiver.entity.Message;
+import sr.will.archiver.transcode.PartTranscoder;
 import sr.will.archiver.transcode.VideoTranscoder;
 import sr.will.archiver.transcode.chatrender.model.MComments;
 import sr.will.archiver.util.FileUtil;
@@ -14,9 +15,9 @@ import java.util.Arrays;
 import java.util.List;
 
 public class ChatRenderer {
-    private final VideoTranscoder transcoder;
+    private final PartTranscoder transcoder;
 
-    public ChatRenderer(VideoTranscoder transcoder) {
+    public ChatRenderer(PartTranscoder transcoder) {
         this.transcoder = transcoder;
     }
 
@@ -58,7 +59,7 @@ public class ChatRenderer {
     }
 
     public void createJsonFile() throws SQLException {
-        MComments comments = new MComments(new MComments.Streamer(Archiver.instance.usernames.get(transcoder.vod.channelId), transcoder.vod.channelId), new MComments.Video(transcoder.probe.getFormat().duration));
+        MComments comments = new MComments(new MComments.Streamer(Archiver.instance.usernames.get(transcoder.vod.channelId), transcoder.vod.channelId), new MComments.Video(transcoder.videoTranscoder.probe.getFormat().duration));
 
         ResultSet result = Archiver.database.query("SELECT id, `offset`, author, message FROM chat WHERE vod = ? ORDER BY `offset` ASC;", transcoder.vod.id);
         while (result.next()) {

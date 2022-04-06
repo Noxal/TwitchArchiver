@@ -115,6 +115,6 @@ public class ChannelDownloader {
         Vod vod = Archiver.instance.getVod(vodId);
         if (vod != null) return vod;
 
-        return new Vod(vodId, userId, createdAt, title, description, null, false, false, false).create();
+        return new Vod(vodId, userId, createdAt, title, description, false, false, false, 0).create();
     }
 }

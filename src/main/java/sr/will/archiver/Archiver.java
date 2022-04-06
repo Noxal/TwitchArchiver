@@ -159,10 +159,10 @@ public class Archiver {
                         Instant.ofEpochMilli(resultSet.getLong("created_at")),
                         resultSet.getString("title"),
                         resultSet.getString("description"),
-                        resultSet.getString("youtube_id"),
                         resultSet.getBoolean("downloaded"),
                         resultSet.getBoolean("transcoded"),
-                        resultSet.getBoolean("uploaded")
+                        resultSet.getBoolean("uploaded"),
+                        resultSet.getInt("parts")
                 ));
             }
         } catch (SQLException e) {
