@@ -65,7 +65,7 @@ public class ChannelDownloader {
         }
     }
 
-    public void addVideoFromStream(Stream stream, int retries) {
+    private void addVideoFromStream(Stream stream, int retries) {
         if (!unhandledStreams.contains(stream)) unhandledStreams.add(stream);
         // There's no easy api call to get a video from a stream id
         // so we just use the call from the original downloader to make things simpler
