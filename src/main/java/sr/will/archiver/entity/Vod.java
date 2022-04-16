@@ -82,6 +82,7 @@ public class Vod {
 
     public String getReplacedString(String original) {
         return original
+                .replace("{id}", id)
                 .replace("{title}", title)
                 .replace("{user}", Archiver.instance.usernames.get(channelId))
                 .replace("{description}", description)

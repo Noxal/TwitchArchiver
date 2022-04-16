@@ -161,10 +161,11 @@ for configuration options that are not readily obvious.
 ```
 
 ### Replacements
-|replacement|description|
-|---|---|
-|title|Original title of the VOD on Twitch|
-|user|Twitch user that uploaded the VOD|
-|description|Original description of the VOD on Twitch|
-|date|Date the VOD started on Twitch|
-|time|Time the VOD started on Twitch|
+| replacement | description                               |
+|-------------|-------------------------------------------|
+| id          | VOD id                                    |
+| title       | Original title of the VOD on Twitch       |
+| user        | Twitch user that uploaded the VOD         |
+| description | Original description of the VOD on Twitch |
+| date        | Date the VOD started on Twitch            |
+| time        | Time the VOD started on Twitch            |
